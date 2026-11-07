@@ -3,6 +3,15 @@ export class SiteAPIError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 
+export function planUUID(random = crypto) {
+  if (random.randomUUID) return random.randomUUID();
+  const bytes = random.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = [...bytes].map(x => x.toString(16).padStart(2, '0')).join('');
+  return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+}
+
 export async function siteAPI(path, options = {}, fetcher = fetch) {
   const response = await fetcher(path, { ...options, credentials: 'include', cache: 'no-store' });
   if (!response.ok) {
@@ -39,7 +48,7 @@ export function deviceJournal(storage) {
       write(value);
       return true;
     },
-    stagePlan(input, id = crypto.randomUUID(), now = Date.now()) {
+    stagePlan(input, id = planUUID(), now = Date.now()) {
       const value = read();
       const plan = { ...input, clientId: id, plannedAt: now, created: now,
         state: 'PLAN_MANUAL_SIN_FILL', sync: 'PENDIENTE', storage: 'ESTE_DISPOSITIVO' };

@@ -77,6 +77,7 @@ export function fedContext(series, now = Date.now()) {
 
 let contextInFlight = null;
 export const CONTEXT_MIRROR='https://raw.githubusercontent.com/bebe2020/bot-nuevo/market-data/context.json';
+const CONTEXT_CAPTURE='__BUILD_PUBLIC_CONTEXT_CAPTURE__';
 export function validateContextMirror(value,now=Date.now()){
  const received=x=>Number.isFinite(x?.received)&&x.received<=now+30000&&x.received>0;
  const status=x=>now-x.received>10800000?'STALE':x.status;
@@ -95,7 +96,7 @@ export function validateContextMirror(value,now=Date.now()){
 async function readContextSources(bucket, fetcher, now) {
   const oldObject = await bucket?.get('context/latest.json');
   const old = oldObject ? await oldObject.json() : null;
-  if (old?.nextCheck > now) return old;
+  if (old?.nextCheck > now&&(old.macro?.value||old.calendar?.items?.length||old.news?.items?.length)) return old;
   const read = async url => {
     const response = await fetcher(url, {signal:AbortSignal.timeout(12000),headers:{Accept:'text/csv, application/rss+xml, text/calendar, text/xml'}});
     if (!response.ok) throw Error('HTTP_' + response.status);
@@ -130,6 +131,10 @@ async function readContextSources(bucket, fetcher, now) {
     const response=await fetcher(CONTEXT_MIRROR+'?slot='+Math.floor(now/300000),{signal:AbortSignal.timeout(8000),headers:{Accept:'application/json'}});
     if(response.ok){const text=await response.text();if(text.length<2000000){const mirror=validateContextMirror(JSON.parse(text),now);for(const id of ['macro','calendar','news'])if(mirror[id]&&(!value[id]?.received||value[id].status==='UNKNOWN'||value[id].status==='STALE'&&mirror[id].received>value[id].received))value[id]=mirror[id];}}
    }catch{}
+   if(typeof CONTEXT_CAPTURE==='object'){
+    const capture=validateContextMirror(CONTEXT_CAPTURE,now);
+    for(const id of ['macro','calendar','news'])if(capture[id]&&(!value[id]?.received||value[id].status==='UNKNOWN'||value[id].status==='STALE'&&capture[id].received>value[id].received))value[id]={...capture[id],transport:'CAPTURA_OFICIAL_FECHADA'};
+   }
   }
   if (bucket) await bucket.put('context/latest.json',JSON.stringify(value),{httpMetadata:{contentType:'application/json'}});
   return value;

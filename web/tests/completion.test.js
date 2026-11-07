@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {deviceJournal,mergeObservations,siteAPI} from '../worker/journal.js';
+import {deviceJournal,mergeObservations,siteAPI,planUUID} from '../worker/journal.js';
 import {parseCalendar,parseNews,fedContext,publicContext,validateContextMirror} from '../worker/context.js';
 import {protocolReadiness} from '../worker/protocol.js';
 import {acquire,assemble} from '../worker/collector.js';
@@ -9,6 +9,11 @@ import {MemoryBucket,fakeFetch} from './fixtures.js';
 
 function storage(){const data=new Map();return {getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};}
 const input={symbol:'BTCUSDT',market:'PERP',side:'LONG',entry:100,stop:95,quantity:1,targets:[110,115,120],entryFee:.001,exitFee:.001,fundingCash:0};
+
+test('IDs siguen siendo UUID v4 con entropía criptográfica si randomUUID no está disponible',()=>{
+ const id=planUUID({getRandomValues:a=>{a.set(Array.from({length:16},(_,i)=>i));return a;}});
+ assert.equal(id,'00010203-0405-4607-8809-0a0b0c0d0e0f');
+});
 
 test('Sesión 401 queda tipada y la petición incluye credenciales sin incrustar secretos',async()=>{
  await assert.rejects(()=>siteAPI('/api/history',{},async(path,options)=>{assert.equal(options.credentials,'include');assert.equal(options.headers,undefined);return new Response('sign in',{status:401});}),e=>e.status===401&&e.message.includes('sesión'));
