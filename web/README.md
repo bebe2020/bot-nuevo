@@ -2,7 +2,9 @@
 
 Proyecto personal independiente de SNIPER/Océano. Motor numérico compartido, transporte público y una interfaz sobre el mismo contrato de datos; no modifica ni incorpora el lanzador L65.
 
-## Implementación actual
+La ampliación más reciente y sus límites están en [MODULOS_2026_11_07.md](docs/MODULOS_2026_11_07.md). Incluye el protocolo automático de las 54, indicadores, DeFi/on-chain/Hyperliquid, activos cruzados y los cinco módulos solicitados.
+
+## Base de implementación
 
 - Universo exacto de 54 activos y taxonomía multietiqueta recuperados del archivo canónico `sniper_narrativas_54.json` revisado el 16/10/2026. Ninguna sustitución por monedas de mayor volumen. Catálogo Bitget SPOT/PERP actual comprobado cada hora; transporte público por debajo de ocho solicitudes por segundo y un solo reintento 429 respetando Retry-After (hasta diez segundos); las filas sin instrumento permanecen visibles.
 - Precios WebSocket públicos para los instrumentos activos; fallback REST explícito. Reconexión y heartbeat; source timestamp separado de recepción y de velas cerradas. Sin controles de pausa o actualización en el flujo principal.
@@ -11,8 +13,8 @@ Proyecto personal independiente de SNIPER/Océano. Motor numérico compartido, t
 - Descubrimiento 54, mapa de calor (24h, caída desde máximo mensual observado, RSI4H), filtros por sector y descuento, matriz de estructura. Caída/descuento no equivalen a acumulación ni a un ATH global certificado.
 - Reglas explícitas de barrido/reclaim, retesteo tras ruptura y anticipación Fibonacci. Micro, scalp, diario, semanal y mensual; trimestre/ciclo son contexto estructural. Cuatro perfiles evalúan hechos y geometría compartidos. Ultra permanece sin admisión operativa sin L2 continuo.
 - Protocolo K1 contexto/K2 evidencia de flujo y proxies/K3 evento cerrado/K4 geometría. Se conserva anticipación con conflictos explicados; flujo contrario no se vende como confirmación. Ningún score representa probabilidad de acierto.
-- Entrada, stop, tres objetivos disponibles y R:R bruto; calculadora de costes/R:R neto y planes manuales durables. Los objetivos Fibonacci proyectados se distinguen del extremo observado. Identidad de evento/stop estable y revisión de geometría incluye objetivos; las invalidaciones intrabar observadas se conservan localmente. No se imputa fill, TP o PnL realizado.
-- Océano: sectores por conjuntos únicos de símbolos, medianas 24h/7d/30d con cobertura, cuatro radares trimestral/ciclo SPOT/PERP. FRED aporta el proxy USD WALCL−TGA−RRP con unidades y fecha común. Se leen el calendario oficial BLS y comunicados Fed/BLS; los fallos conservan el último dato fechado y se explican. La liquidez mundial no está integrada.
+- Entrada, stop, tres objetivos disponibles y R:R bruto; calculadora de costes/R:R neto y planes manuales durables. Los objetivos Fibonacci proyectados se distinguen del extremo observado. Identidad de evento/stop estable y revisión de geometría incluye objetivos; las invalidaciones intrabar observadas se conservan localmente. Los registros reales no imputan fills ni PnL; el módulo adicional de seguimiento simulado etiqueta explícitamente sus resultados hipotéticos.
+- Océano: sectores por conjuntos únicos de símbolos, medianas 24h/7d/30d con cobertura, cuatro radares trimestral/ciclo SPOT/PERP. FRED aporta el proxy USD WALCL−TGA−RRP con unidades y fecha común. Se leen el calendario oficial BLS y comunicados Fed/BLS; los fallos conservan el último dato fechado y se explican. Se agrega stock global USD de stablecoins y fuerza relativa de activos cruzados; M2 mundial agregado continúa sin fuente verificada.
 - GitHub Actions: capturas públicas programadas con objetivo de cinco minutos en `market-data`; reusa las velas que siguen siendo válidas sin alterar sus relojes. El horario puede demorarse o suspenderse por las reglas de GitHub. La pantalla muestra el último éxito real. No almacena cada tick con el navegador cerrado.
 
 ## Arquitectura única

@@ -1,3 +1,4 @@
+import {globalProviders,crossAssetProviders,onchainProvider,kronosProvider,publicWatchHistory} from './providers.js';
 import {VERSION,UNIVERSE,FRAMES,HORIZONS,POLICIES,n,fact,closed,endOfBar,structures,profileFacts,bookFacts,fundingFact,tradesFact,quarterBars,ema,netLiquidity,fredCSV,CHECKS,riskPlan} from './engine.js';
 import {HTML} from './ui.js';
 import {acquire,assemble,makeCoverage} from './collector.js';
@@ -62,9 +63,14 @@ export default {async fetch(request,env){
  const url=new URL(request.url);try{
   if(url.pathname==='/'&&request.method==='GET')return new Response(HTML,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.bitget.com wss://ws.bitget.com; img-src 'self' data:; frame-ancestors 'self' https://chatgpt.com https://*.chatgpt.com; object-src 'none'; base-uri 'self'",'X-Content-Type-Options':'nosniff'}});
   if(request.method==='GET'&&typeof PUBLIC_ASSETS==='object'&&PUBLIC_ASSETS[url.pathname]){const a=PUBLIC_ASSETS[url.pathname];return new Response(a.body,{headers:{'Content-Type':a.type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
-  if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:'protocolo-2.0',liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
+  if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:'protocolo-2.0',featureSet:'radar54-modules-20261107',labModules:5,liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
   if(url.pathname==='/api/cloud'){const {raw,...status}=await cloudFeed();return json(status);}
   if(url.pathname==='/api/context'&&request.method==='GET')return json(await publicContext(env.BUCKET));
+  if(url.pathname==='/api/providers'&&request.method==='GET')return json(await globalProviders(env.BUCKET));
+  if(url.pathname==='/api/cross-assets'&&request.method==='GET')return json(await crossAssetProviders(env.BUCKET));
+  if(url.pathname==='/api/onchain'&&request.method==='GET')return json(await onchainProvider(env.BUCKET,url.searchParams.get('symbol')||'BTCUSDT'));
+  if(url.pathname==='/api/watch-public'&&request.method==='GET')return json(await publicWatchHistory());
+  if(url.pathname==='/api/kronos'&&request.method==='GET')return json(await kronosProvider(env.BUCKET,url.searchParams.get('symbol')||'BTCUSDT',url.searchParams.get('market')||'PERP'));
   if(url.pathname==='/api/snapshot'&&request.method==='GET'){const symbol=url.searchParams.get('symbol')||'BTCUSDT',market=url.searchParams.get('market')||'PERP';if(!UNIVERSE.includes(symbol)||!['SPOT','PERP'].includes(market))return json({error:'INSTRUMENTO_NO_ADMITIDO'},400);let s=await getObject(env.BUCKET,snapshotKey(symbol,market));if(symbol==='BTCUSDT'&&market==='PERP'&&(!s||Date.now()-s.received>60000)){const c=await cloudFeed();if(c.raw?.version===VERSION&&c.raw?.symbol===symbol&&(!s||c.raw.received>s.received)){try{s=await ingest(env.BUCKET,c.raw,{maxAgeMs:1800000,collector:'GITHUB_ACTIONS_PUBLICO'});}catch{}}}return json(s?freshen(s,Date.now()):{symbol,market,waitingForCollector:true,version:VERSION});}
   if(url.pathname==='/api/ingest'&&request.method==='POST'){
    if(request.headers.get('X-Bot-Write')!=='1'||request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin||!request.headers.get('Content-Type')?.includes('application/json'))return json({error:'ORIGEN_O_CONTENIDO_INVALIDO'},403);

@@ -1,241 +1,487 @@
 {
-  "siteBaseCommit": "4ce16e05d784de8f9dd3edad5d2a5bdf29d2dd31",
-  "githubBaseCommit": "a624e937b321e348216444ebb3321b19a9989ac9",
+  "siteBaseCommit": "3b95ec2f46c36f610ff6317e6e290ae3744ce669",
+  "githubFeatureParent": "6f6324d402bf1312239a3f3a3cb8b9dfea6e2601",
   "checks": {
-    "nodeTests": 82,
+    "nodeTests": 103,
     "nodeFailures": 0,
     "workerArtifact": "VALID_ESM",
-    "android": "NO_OBSERVADO"
+    "mobileChrome": {
+      "frameWidth": 360,
+      "documentWidth": 345,
+      "documentScrollWidth": 345,
+      "radarRows": 54,
+      "cpoolClosedCandles15m": 499
+    },
+    "android": "NO_OBSERVADO",
+    "kronosValidInferences": 54,
+    "kronosSteps": 16
   },
   "files": [
     {
-      "path": "scripts/build.mjs",
-      "bytes": 1642,
-      "sha256": "ffa4d49320ebdefbb06ca91a17740ed36070d829e52c5a84b66d62aab236cc4c",
-      "functions": []
-    },
-    {
-      "path": "scripts/cloud-feed.mjs",
-      "bytes": 4529,
-      "sha256": "57a5a232e3f646fd32b9e953631ad162f2e62e8edd0cefcfc050ffc6be0fd7c9",
-      "functions": [
-        "githubRequest",
-        "publicSummary",
-        "publishFeed",
-        "main"
-      ]
-    },
-    {
-      "path": "scripts/dev.mjs",
-      "bytes": 3866,
-      "sha256": "a07ba0ac512cf68907a351a99e8d7d2cb127c7f4d0d0a66afefecbe099af48de",
-      "functions": []
-    },
-    {
-      "path": "scripts/validate-artifact.mjs",
-      "bytes": 953,
-      "sha256": "39d9df53ac2461962466d5965c5f4d06f08024ceca40605952d8b753b88d41fd",
-      "functions": []
-    },
-    {
       "path": "worker/app.js",
-      "bytes": 42948,
-      "sha256": "31b49d5d2589af60d9448fb82a776ef19798ae88cb7bebeb5a3ddd187b3e3b3c",
-      "functions": [
-        "api",
-        "captureLocal",
-        "setView",
-        "quoteReceived",
-        "startFeed",
-        "restQuotes",
-        "renderQuote",
-        "renderTicker",
-        "load",
-        "selectSymbol",
-        "renderAll",
-        "renderChart",
-        "tickValue",
-        "renderFractals",
-        "renderNarrative",
-        "refreshBook",
-        "renderBook",
-        "ideaEvaluation",
-        "relevantIdeas",
-        "ideaCard",
-        "renderIdeas",
-        "renderProtocol",
-        "renderMarketAvailability",
-        "renderUniverse",
-        "renderOceano",
-        "renderContext",
-        "renderPrints",
-        "getContext",
-        "refreshTrades",
-        "fillPlan",
-        "riskInput",
-        "showRisk",
-        "syncPendingPlans",
-        "loadHistory",
-        "renderConnections",
-        "getCloud",
-        "boot"
-      ]
+      "bytes": 49749,
+      "sha256": "44c9e78b52b3587c0edb813ac2216ae9733114f3a6a6933e30a66652d9c106a9"
+    },
+    {
+      "path": "worker/auto-protocol.js",
+      "bytes": 5390,
+      "sha256": "08f9759823e2a4ec254c1a7cf9ad27c397455518ecd677176e71768cbcbcb62a"
     },
     {
       "path": "worker/chart.js",
-      "bytes": 5113,
-      "sha256": "96122d716703ed772effaebb8ab67cad11fa13b4e82804ebf4e8502112b543da",
-      "functions": []
+      "bytes": 12591,
+      "sha256": "693ef6b880e99903c536dd1fd6cf897ed4562beec4cf5e411a8a511f20a82f95"
     },
     {
       "path": "worker/collector.js",
-      "bytes": 18915,
-      "sha256": "c2007b287ea7de5892a757d735006caed00c46cdb1f1a86dae1f4f843f79de72",
-      "functions": [
-        "reservePublicSlot",
-        "bitget",
-        "safely",
-        "mapLimit",
-        "cacheFor",
-        "catalog",
-        "supported",
-        "aggregateBars",
-        "frameData",
-        "getBook",
-        "blankRow",
-        "acquire",
-        "validFrame",
-        "rowSummary",
-        "assemble",
-        "makeCoverage",
-        "primeCache"
-      ]
+      "bytes": 21286,
+      "sha256": "f9cafcb898682e3e39fd6284082356cfe8af10be10a420bc344760bcbb8afbef"
     },
     {
       "path": "worker/context-capture.json",
       "bytes": 12025,
-      "sha256": "acbdd5f9443b690198bbdc68897570fe944dc3d1bdbfa14f3ea2dea1609796ea",
-      "functions": []
+      "sha256": "acbdd5f9443b690198bbdc68897570fe944dc3d1bdbfa14f3ea2dea1609796ea"
     },
     {
       "path": "worker/context.js",
       "bytes": 9792,
-      "sha256": "65918c059d221d45caca397603eb2011727c50639bda54c5ab16275670f1ac2d",
-      "functions": [
-        "plainText",
-        "parseNews",
-        "calendarTime",
-        "parseCalendar",
-        "fedContext",
-        "validateContextMirror",
-        "readContextSources",
-        "publicContext"
-      ]
+      "sha256": "65918c059d221d45caca397603eb2011727c50639bda54c5ab16275670f1ac2d"
     },
     {
       "path": "worker/engine.js",
       "bytes": 14461,
-      "sha256": "05565155d06a84a7669f9a8e12d88abec8d68d10b8ea95b6f50cf621d431cb0f",
-      "functions": [
-        "endOfBar",
-        "closed",
-        "ema",
-        "atr",
-        "volume",
-        "bookFacts",
-        "pivots",
-        "structures",
-        "zones",
-        "profileFacts",
-        "fundingFact",
-        "tradesFact",
-        "quarterBars",
-        "riskPlan",
-        "fredCSV",
-        "netLiquidity"
-      ]
+      "sha256": "05565155d06a84a7669f9a8e12d88abec8d68d10b8ea95b6f50cf621d431cb0f"
+    },
+    {
+      "path": "worker/index.js",
+      "bytes": 1346,
+      "sha256": "2917434bd856c428f5ea636148dfd0161804c14a2f81e019980d573af28ef883"
     },
     {
       "path": "worker/indicators.js",
       "bytes": 4624,
-      "sha256": "ca8c05149ab9e46b5ce72818d7bebe445c6ee9b30a3f506d1a44282ff82fb644",
-      "functions": [
-        "emaSeries",
-        "rsiSeries",
-        "indicatorSeries",
-        "fibonacci",
-        "volumeProfile",
-        "discountFromHistory"
-      ]
+      "sha256": "ca8c05149ab9e46b5ce72818d7bebe445c6ee9b30a3f506d1a44282ff82fb644"
     },
     {
       "path": "worker/journal.js",
       "bytes": 3200,
-      "sha256": "8e35e10e62efae7f26041070148b7780d08bc9f590a838ebb606e147cfc8621c",
-      "functions": [
-        "planUUID",
-        "siteAPI",
-        "deviceJournal",
-        "mergeObservations"
-      ]
+      "sha256": "8e35e10e62efae7f26041070148b7780d08bc9f590a838ebb606e147cfc8621c"
+    },
+    {
+      "path": "worker/kronos-capture.json",
+      "bytes": 113513,
+      "sha256": "d1135d549e50d38e0e6c31324455db5fa34b8d6cf45f1895b1f4efd7d2672c73"
+    },
+    {
+      "path": "worker/lab.js",
+      "bytes": 10577,
+      "sha256": "a6e8e29716f9700bc64c9f19753cdadb33f92935ce641f082e50cf400c6d84dd"
     },
     {
       "path": "worker/live.js",
-      "bytes": 4603,
-      "sha256": "65a0944aaa39c9193845acb5718d64a4a7a3e1495f35486004cb6ec0705d082c",
-      "functions": [
-        "tickerMessage",
-        "quoteState"
-      ]
+      "bytes": 4881,
+      "sha256": "e3ba36b5401f396fac248596821a01bec6f93d32571381fb3acff130049dedc4"
+    },
+    {
+      "path": "worker/market-contract.js",
+      "bytes": 2373,
+      "sha256": "f33480ac668c8e046200a641734720b50fb4671714a419dd1ac7a5d25cf7c290"
+    },
+    {
+      "path": "worker/panels.js",
+      "bytes": 26261,
+      "sha256": "7f8719507c48930e09afac21d79531e996d78175249588b83f0c6ba7b1893b98"
+    },
+    {
+      "path": "worker/paper.js",
+      "bytes": 2995,
+      "sha256": "ba4d7f6b20472de18697afdc16f8a13d6a64a19abf9e8777cbcf963ef4822221"
     },
     {
       "path": "worker/protocol.js",
       "bytes": 12877,
-      "sha256": "d41e86ae4962be0b4e0637cb8f7fdaaeb362ee633c625b85ade57c132871dc28",
-      "functions": [
-        "currentPrice",
-        "instrumentTick",
-        "makeGeometry",
-        "evaluateIdea",
-        "protocolIdeas",
-        "enrichSnapshot",
-        "rsiSeriesLast",
-        "marketNarrative",
-        "sectorStrength",
-        "protocolReadiness"
-      ]
+      "sha256": "d41e86ae4962be0b4e0637cb8f7fdaaeb362ee633c625b85ade57c132871dc28"
+    },
+    {
+      "path": "worker/provider-capture.json",
+      "bytes": 106531,
+      "sha256": "5cd5ec039ae415198513e6a376d75f2747f5accbd5e54afdc074d722dc916008"
+    },
+    {
+      "path": "worker/providers.js",
+      "bytes": 21463,
+      "sha256": "2890d5b3868a8bf2c870006748d01aca52ecf3b04fac3de0b6885101b4d77655"
     },
     {
       "path": "worker/service.js",
-      "bytes": 14000,
-      "sha256": "9e3edca12c9d6a52cecaba07237c6a35af041d8bc237e5c93422ea30cd1772be",
-      "functions": [
-        "macroData",
-        "freshen",
-        "collect",
-        "history",
-        "ingest",
-        "cloudFeed",
-        "mergedHistory"
-      ]
+      "bytes": 14834,
+      "sha256": "340e73d5ba941aa8769b431d864d51310f5251032b0ed76534e237f9625a1e1f"
     },
     {
-      "path": "worker/terminal.css",
-      "bytes": 12223,
-      "sha256": "5af99a3bdfed2ca0cf078b947d3588b0eb83eaa23f1c6f5419bb1d208d229b4d",
-      "functions": []
+      "path": "worker/technicals.js",
+      "bytes": 8591,
+      "sha256": "1a08a0196b1bd22d9a99a4e9c5f563d8e9290a88011a974ce8879545c64e6097"
     },
     {
       "path": "worker/ui.js",
-      "bytes": 11459,
-      "sha256": "9558248755920e481607f40ddafe7709fd8c384771afaab7867f19b9a917a62b",
-      "functions": []
+      "bytes": 20767,
+      "sha256": "fba5b6166006b41cb2fbbb0ae453022c29118f884079a5a6bde911eb568b1cb3"
     },
     {
       "path": "worker/universe.js",
       "bytes": 12563,
-      "sha256": "d16f697df8234ef5b55614afe8d20a30aa159c1b8f8bffc33be4556453e28e22",
-      "functions": []
+      "sha256": "d16f697df8234ef5b55614afe8d20a30aa159c1b8f8bffc33be4556453e28e22"
+    },
+    {
+      "path": "scripts/build.mjs",
+      "bytes": 2166,
+      "sha256": "9f8d25b08c4189a1328b731c04143ed9c1d1331075769f6bd34eb9341b121f84"
+    },
+    {
+      "path": "scripts/capture-kronos-input.mjs",
+      "bytes": 1063,
+      "sha256": "6d6424172885f63ee1f3b24e45811d63bde0b9bf7ee78ff1c445909380fc3e2d"
+    },
+    {
+      "path": "scripts/cloud-feed.mjs",
+      "bytes": 4620,
+      "sha256": "d721dee08bf08b3767756065f25f0cbd55c3c83d7dc51960a4db83c2f4d110e8"
+    },
+    {
+      "path": "scripts/dev.mjs",
+      "bytes": 4039,
+      "sha256": "3aef1dbf7c1e8535e5b53f7899a2706974f42b4467e51bbe28766ba81cdf555b"
+    },
+    {
+      "path": "scripts/publish-kronos.mjs",
+      "bytes": 1193,
+      "sha256": "a00468f6ddcb37e7478b9c7f1e22e92bad3a8feddf294e372dcab5ff80500dfd"
+    },
+    {
+      "path": "scripts/validate-artifact.mjs",
+      "bytes": 953,
+      "sha256": "39d9df53ac2461962466d5965c5f4d06f08024ceca40605952d8b753b88d41fd"
+    },
+    {
+      "path": "tests/cloud-feed.test.js",
+      "bytes": 2277,
+      "sha256": "d847ffe3a6c53a6c1ca528dd1045e5a92a9981e4492ba9669ec1b2b89701833f"
+    },
+    {
+      "path": "tests/cloud-read.test.js",
+      "bytes": 1694,
+      "sha256": "feb43ef16df9c931e8b7379dce6822b182ebc8ebee6a4685f66ad0285481195c"
+    },
+    {
+      "path": "tests/completion.test.js",
+      "bytes": 10395,
+      "sha256": "2546baee73bcd47bb6c91b2c782fc0f15f21770c7be294d327f03aa61adfc6d3"
+    },
+    {
+      "path": "tests/fixtures.js",
+      "bytes": 3206,
+      "sha256": "1db943e3fd4162a35979ebc8b593732846766ffb3cea1a29ba51a849a4c21771"
+    },
+    {
+      "path": "tests/live.test.js",
+      "bytes": 3643,
+      "sha256": "668a641be53c7a5ed0f16698dba1ac38ac2857f8190f204ed349ec9b95bae559"
+    },
+    {
+      "path": "tests/modules.test.js",
+      "bytes": 12286,
+      "sha256": "136ca400c720d0838f8cf548af65e860411a15ab4597e7636e3bea8426a7634b"
+    },
+    {
+      "path": "tests/professional.test.js",
+      "bytes": 7837,
+      "sha256": "6eb6cf9dd84535a42e68603c00a8aec68e27fb2bc21bd9afc9d55d391166e91f"
+    },
+    {
+      "path": "tests/python-golden.json",
+      "bytes": 2259,
+      "sha256": "e7becf6cfee8dc911869838fe9fc112c7a868f36284ec49298921bcc67781808"
+    },
+    {
+      "path": "tests/terminal.test.js",
+      "bytes": 12406,
+      "sha256": "6a7a7d16ef5c26fa1dfb805b31891d0ac7201ee016b531125d165c1984e4ee06"
+    },
+    {
+      "path": "inference/README.md",
+      "bytes": 1655,
+      "sha256": "c1696dc3ce7793c340b0c7394f34a003b60960a533974a947769ab16d0177126"
+    },
+    {
+      "path": "inference/requirements.txt",
+      "bytes": 114,
+      "sha256": "c8bbb22b8be630762667f8d8fbe38556a7a6c36817a049d6961ec2beb66aa176"
+    },
+    {
+      "path": "inference/run_kronos.py",
+      "bytes": 4414,
+      "sha256": "ba7afe2bef72af06d1b7404f7972051a8c7e91b892bf116505eb7d3e350acab6"
+    },
+    {
+      "path": "inference/vendor/kronos/model/__init__.py",
+      "bytes": 396,
+      "sha256": "1bf70432e43a45f0205c1e092eb785ec05ac2e69589a9d7d3608b46f891e36a2"
+    },
+    {
+      "path": "inference/vendor/kronos/model/kronos.py",
+      "bytes": 30134,
+      "sha256": "bf075627ad412ce195b985b47296eae3571a4cc4c33e43b8b0ef4f194d165242"
+    },
+    {
+      "path": "inference/vendor/kronos/model/module.py",
+      "bytes": 22857,
+      "sha256": "6bc2f4594e33be391071ea236ad28886bd59667562d38f24db3adb06bd079092"
+    },
+    {
+      "path": "inference/vendor/kronos/requirements.txt",
+      "bytes": 130,
+      "sha256": "befb5cc4b18ac3c79d690c99440f07ab86082b0797ba6f4c887984b9bfdc7e40"
     }
-  ]
+  ],
+  "previousManifest": {
+    "siteBaseCommit": "4ce16e05d784de8f9dd3edad5d2a5bdf29d2dd31",
+    "githubBaseCommit": "a624e937b321e348216444ebb3321b19a9989ac9",
+    "checks": {
+      "nodeTests": 82,
+      "nodeFailures": 0,
+      "workerArtifact": "VALID_ESM",
+      "android": "NO_OBSERVADO"
+    },
+    "files": [
+      {
+        "path": "scripts/build.mjs",
+        "bytes": 1642,
+        "sha256": "ffa4d49320ebdefbb06ca91a17740ed36070d829e52c5a84b66d62aab236cc4c",
+        "functions": []
+      },
+      {
+        "path": "scripts/cloud-feed.mjs",
+        "bytes": 4529,
+        "sha256": "57a5a232e3f646fd32b9e953631ad162f2e62e8edd0cefcfc050ffc6be0fd7c9",
+        "functions": [
+          "githubRequest",
+          "publicSummary",
+          "publishFeed",
+          "main"
+        ]
+      },
+      {
+        "path": "scripts/dev.mjs",
+        "bytes": 3866,
+        "sha256": "a07ba0ac512cf68907a351a99e8d7d2cb127c7f4d0d0a66afefecbe099af48de",
+        "functions": []
+      },
+      {
+        "path": "scripts/validate-artifact.mjs",
+        "bytes": 953,
+        "sha256": "39d9df53ac2461962466d5965c5f4d06f08024ceca40605952d8b753b88d41fd",
+        "functions": []
+      },
+      {
+        "path": "worker/app.js",
+        "bytes": 42948,
+        "sha256": "31b49d5d2589af60d9448fb82a776ef19798ae88cb7bebeb5a3ddd187b3e3b3c",
+        "functions": [
+          "api",
+          "captureLocal",
+          "setView",
+          "quoteReceived",
+          "startFeed",
+          "restQuotes",
+          "renderQuote",
+          "renderTicker",
+          "load",
+          "selectSymbol",
+          "renderAll",
+          "renderChart",
+          "tickValue",
+          "renderFractals",
+          "renderNarrative",
+          "refreshBook",
+          "renderBook",
+          "ideaEvaluation",
+          "relevantIdeas",
+          "ideaCard",
+          "renderIdeas",
+          "renderProtocol",
+          "renderMarketAvailability",
+          "renderUniverse",
+          "renderOceano",
+          "renderContext",
+          "renderPrints",
+          "getContext",
+          "refreshTrades",
+          "fillPlan",
+          "riskInput",
+          "showRisk",
+          "syncPendingPlans",
+          "loadHistory",
+          "renderConnections",
+          "getCloud",
+          "boot"
+        ]
+      },
+      {
+        "path": "worker/chart.js",
+        "bytes": 5113,
+        "sha256": "96122d716703ed772effaebb8ab67cad11fa13b4e82804ebf4e8502112b543da",
+        "functions": []
+      },
+      {
+        "path": "worker/collector.js",
+        "bytes": 18915,
+        "sha256": "c2007b287ea7de5892a757d735006caed00c46cdb1f1a86dae1f4f843f79de72",
+        "functions": [
+          "reservePublicSlot",
+          "bitget",
+          "safely",
+          "mapLimit",
+          "cacheFor",
+          "catalog",
+          "supported",
+          "aggregateBars",
+          "frameData",
+          "getBook",
+          "blankRow",
+          "acquire",
+          "validFrame",
+          "rowSummary",
+          "assemble",
+          "makeCoverage",
+          "primeCache"
+        ]
+      },
+      {
+        "path": "worker/context-capture.json",
+        "bytes": 12025,
+        "sha256": "acbdd5f9443b690198bbdc68897570fe944dc3d1bdbfa14f3ea2dea1609796ea",
+        "functions": []
+      },
+      {
+        "path": "worker/context.js",
+        "bytes": 9792,
+        "sha256": "65918c059d221d45caca397603eb2011727c50639bda54c5ab16275670f1ac2d",
+        "functions": [
+          "plainText",
+          "parseNews",
+          "calendarTime",
+          "parseCalendar",
+          "fedContext",
+          "validateContextMirror",
+          "readContextSources",
+          "publicContext"
+        ]
+      },
+      {
+        "path": "worker/engine.js",
+        "bytes": 14461,
+        "sha256": "05565155d06a84a7669f9a8e12d88abec8d68d10b8ea95b6f50cf621d431cb0f",
+        "functions": [
+          "endOfBar",
+          "closed",
+          "ema",
+          "atr",
+          "volume",
+          "bookFacts",
+          "pivots",
+          "structures",
+          "zones",
+          "profileFacts",
+          "fundingFact",
+          "tradesFact",
+          "quarterBars",
+          "riskPlan",
+          "fredCSV",
+          "netLiquidity"
+        ]
+      },
+      {
+        "path": "worker/indicators.js",
+        "bytes": 4624,
+        "sha256": "ca8c05149ab9e46b5ce72818d7bebe445c6ee9b30a3f506d1a44282ff82fb644",
+        "functions": [
+          "emaSeries",
+          "rsiSeries",
+          "indicatorSeries",
+          "fibonacci",
+          "volumeProfile",
+          "discountFromHistory"
+        ]
+      },
+      {
+        "path": "worker/journal.js",
+        "bytes": 3200,
+        "sha256": "8e35e10e62efae7f26041070148b7780d08bc9f590a838ebb606e147cfc8621c",
+        "functions": [
+          "planUUID",
+          "siteAPI",
+          "deviceJournal",
+          "mergeObservations"
+        ]
+      },
+      {
+        "path": "worker/live.js",
+        "bytes": 4603,
+        "sha256": "65a0944aaa39c9193845acb5718d64a4a7a3e1495f35486004cb6ec0705d082c",
+        "functions": [
+          "tickerMessage",
+          "quoteState"
+        ]
+      },
+      {
+        "path": "worker/protocol.js",
+        "bytes": 12877,
+        "sha256": "d41e86ae4962be0b4e0637cb8f7fdaaeb362ee633c625b85ade57c132871dc28",
+        "functions": [
+          "currentPrice",
+          "instrumentTick",
+          "makeGeometry",
+          "evaluateIdea",
+          "protocolIdeas",
+          "enrichSnapshot",
+          "rsiSeriesLast",
+          "marketNarrative",
+          "sectorStrength",
+          "protocolReadiness"
+        ]
+      },
+      {
+        "path": "worker/service.js",
+        "bytes": 14000,
+        "sha256": "9e3edca12c9d6a52cecaba07237c6a35af041d8bc237e5c93422ea30cd1772be",
+        "functions": [
+          "macroData",
+          "freshen",
+          "collect",
+          "history",
+          "ingest",
+          "cloudFeed",
+          "mergedHistory"
+        ]
+      },
+      {
+        "path": "worker/terminal.css",
+        "bytes": 12223,
+        "sha256": "5af99a3bdfed2ca0cf078b947d3588b0eb83eaa23f1c6f5419bb1d208d229b4d",
+        "functions": []
+      },
+      {
+        "path": "worker/ui.js",
+        "bytes": 11459,
+        "sha256": "9558248755920e481607f40ddafe7709fd8c384771afaab7867f19b9a917a62b",
+        "functions": []
+      },
+      {
+        "path": "worker/universe.js",
+        "bytes": 12563,
+        "sha256": "d16f697df8234ef5b55614afe8d20a30aa159c1b8f8bffc33be4556453e28e22",
+        "functions": []
+      }
+    ]
+  }
 }

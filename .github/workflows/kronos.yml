@@ -1,0 +1,41 @@
+name: Inferencias públicas Kronos-mini
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/kronos.yml'
+      - 'web/inference/**'
+      - 'web/scripts/capture-kronos-input.mjs'
+      - 'web/scripts/publish-kronos.mjs'
+permissions:
+  contents: write
+concurrency:
+  group: public-market-feed
+  cancel-in-progress: false
+jobs:
+  infer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Instalar dependencias CPU
+        working-directory: web
+        run: |
+          python3 -m venv .local/kronos-env
+          .local/kronos-env/bin/pip install --extra-index-url https://download.pytorch.org/whl/cpu -r inference/requirements.txt
+      - name: Leer 128 velas cerradas de cada instrumento
+        working-directory: web
+        run: node scripts/capture-kronos-input.mjs .local/kronos-input.json
+      - name: Ejecutar modelo real
+        working-directory: web
+        run: .local/kronos-env/bin/python inference/run_kronos.py --input .local/kronos-input.json --output .local/kronos-output.json
+      - name: Publicar solo datos públicos
+        working-directory: web
+        run: node scripts/publish-kronos.mjs .local/kronos-output.json
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

@@ -11,7 +11,7 @@ export async function githubRequest(repository,token,path,method='GET',body,fetc
 }
 export function publicSummary(raw){
  const s=assemble(raw);if(!s.ticker.lastPr||s.structures['15m'].status!=='OK')throw Error('SIN_CAPTURA_PUBLICA_VALIDA');
- return {id:Math.floor(raw.received/60000)+':'+raw.symbol,received:raw.received,asof:s.sourceAsOf,symbol:raw.symbol,prices:s.universe.map(x=>({symbol:x.symbol,price:x.price,change:x.change})),source:'BITGET_PUBLICO',accountData:false};
+ return {id:Math.floor(raw.received/60000)+':'+raw.symbol,received:raw.received,asof:s.sourceAsOf,symbol:raw.symbol,prices:(s.radarUniverse||s.universe).map(x=>({symbol:x.symbol,market:x.market||s.market,price:x.price,change:x.change})),watch:s.watchlist?.filter(x=>x.attention)||[],source:'BITGET_PUBLICO',accountData:false};
 }
 export async function publishFeed({repository,token,raw,context=null,error=null,fetcher=fetch,now=Date.now()}){
  if(!token)throw Error('TOKEN_DE_WORKFLOW_NO_DISPONIBLE');

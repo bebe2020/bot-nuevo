@@ -1,7 +1,7 @@
 import http from 'node:http';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync,existsSync,renameSync} from 'node:fs';
 import {resolve} from 'node:path';
-import worker from '../worker/service.js';
+const worker=(await import(existsSync('dist/server/index.js')?'../dist/server/index.js':'../worker/service.js')).default;
 import {collect} from '../worker/service.js';
 import {fakeFetch} from '../tests/fixtures.js';
 const root=resolve('.local/store');mkdirSync(root,{recursive:true});
@@ -17,7 +17,7 @@ const server=http.createServer(async(req,res)=>{try{
  const request=new Request(url,{method:req.method,headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
  let r;const fixture=existsSync('.local/fixture-mode'),sessionExpired=existsSync('.local/session-expired');
  if(sessionExpired&&['/api/history','/api/plans','/api/ingest'].includes(url.pathname))r=Response.json({error:'SESION_VENCIDA_PRUEBA_LOCAL'},{status:401});
- else if(['/universe.js','/engine.js','/indicators.js','/protocol.js','/collector.js','/live.js','/chart.js','/journal.js','/app.js','/terminal.css'].includes(url.pathname))r=new Response(readFileSync('worker'+url.pathname,'utf8'),{headers:{'Content-Type':url.pathname.endsWith('.css')?'text/css':'application/javascript'}});
+ else if(['/universe.js','/market-contract.js','/engine.js','/indicators.js','/technicals.js','/auto-protocol.js','/protocol.js','/collector.js','/live.js','/chart.js','/journal.js','/lab.js','/paper.js','/panels.js','/app.js','/terminal.css'].includes(url.pathname))r=new Response(readFileSync('worker'+url.pathname,'utf8'),{headers:{'Content-Type':url.pathname.endsWith('.css')?'text/css':'application/javascript'}});
  else if(url.pathname==='/vendor/lightweight-charts.js')r=new Response(readFileSync('node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.mjs','utf8'),{headers:{'Content-Type':'application/javascript'}});
  else if(url.pathname==='/__qa/mobile')r=new Response('<!doctype html><html><head><meta charset="utf-8"><title>QA móvil · 360px</title></head><body style="margin:0;background:#27364a"><iframe title="Bot Nuevo 360px" src="/" style="display:block;width:360px;height:840px;border:0;margin:auto"></iframe></body></html>',{headers:{'Content-Type':'text/html'}});
  else if(fixture&&url.pathname==='/api/snapshot')r=Response.json({...await collect(bucket,url.searchParams.get('symbol')||'BTCUSDT',fakeFetch()),dataMode:'SYNTHETIC_TEST_ONLY'});
