@@ -4,7 +4,7 @@ Proyecto personal independiente de SNIPER/Océano. Motor numérico compartido, t
 
 ## Implementación actual
 
-- Universo exacto de 54 activos y taxonomía multietiqueta recuperados del archivo canónico `sniper_narrativas_54.json` revisado el 16/10/2026. Ninguna sustitución por monedas de mayor volumen. Catálogo Bitget SPOT/PERP actual comprobado cada hora; las filas sin instrumento permanecen visibles.
+- Universo exacto de 54 activos y taxonomía multietiqueta recuperados del archivo canónico `sniper_narrativas_54.json` revisado el 16/10/2026. Ninguna sustitución por monedas de mayor volumen. Catálogo Bitget SPOT/PERP actual comprobado cada hora; transporte público por debajo de ocho solicitudes por segundo y un solo reintento 429 respetando Retry-After (hasta diez segundos); las filas sin instrumento permanecen visibles.
 - Precios WebSocket públicos para los instrumentos activos; fallback REST explícito. Reconexión y heartbeat; source timestamp separado de recepción y de velas cerradas. Sin controles de pausa o actualización en el flujo principal.
 - TradingView Lightweight Charts 5.1.0, servido localmente: velas, escala de precios, crosshair/zoom, EMA9/21/50/100/200, volumen y RSI Wilder14 en paneles separados. Fibonacci causal, OB/FVG y POC/VAH/VAL aproximados con controles de visibilidad. La vela provisional usa precios recibidos y queda fuera de las confirmaciones e indicadores cerrados.
 - Trece temporalidades nativas/derivadas y trimestre calendario: 1m,5m,15m,30m,1H,2H,4H,6H,8H,12H,1Dutc,1Wutc,1Mutc,3M. 8H se deriva de 4H; 2H SPOT de 1H; semanas del radar se agregan desde días completos alineados al lunes UTC. Se rechazan huecos. No se inventa EMA200 con 199 barras.

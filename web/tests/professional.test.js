@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {ASSETS,SYMBOLS,TAXONOMY} from '../worker/universe.js';
 import {rsiSeries,emaSeries,fibonacci,volumeProfile,indicatorSeries} from '../worker/indicators.js';
 import {evaluateIdea,makeGeometry,PROTOCOLS,sectorStrength,protocolIdeas} from '../worker/protocol.js';
-import {acquire,assemble,aggregateBars,primeCache} from '../worker/collector.js';
+import {acquire,assemble,aggregateBars,primeCache,bitget} from '../worker/collector.js';
 import {VERSION,FRAMES,fact} from '../worker/engine.js';
 import {fakeFetch,MemoryBucket,candles} from './fixtures.js';
 import worker,{ingest} from '../worker/service.js';
@@ -22,3 +22,5 @@ test('Una tesis conserva geometría entre cuatro perfiles; ultra no finge L2',as
 test('Invalidación no requiere fill hipotético y terminales tienen prioridad',async()=>{const raw=await acquire('BTCUSDT',fakeFetch()),s=assemble(raw),idea={id:'test',horizon:'DIARIO',side:'LONG',family:'BARRIDO_RECLAIM',formed:s.received,entry:100,stop:90,targets:[110,120,130],tick:.1};const e=evaluateIdea({...s,currentPrice:89},idea,'AGRESIVO',s.received);assert.equal(e.phase,'INVALIDADA');assert.equal(e.admission,'INVALIDADA');});
 test('Trimestral y ciclo son radares estructurales; nunca disparos oficiales',async()=>{const s=assemble(await acquire('BTCUSDT',fakeFetch()));assert.deepEqual(protocolIdeas(s,'TRIMESTRAL'),[]);assert.deepEqual(protocolIdeas(s,'CICLO_3_ANOS'),[]);assert.equal(PROTOCOLS.TRIMESTRAL.kind,'ESTRUCTURAL');});
 test('Plan SPOT SHORT rechazado por servidor y separa almacenamiento SPOT/PERP',async()=>{const b=new MemoryBucket();const r=await worker.fetch(new Request('https://test.invalid/api/plans',{method:'POST',headers:{'X-Bot-Write':'1','Content-Type':'application/json'},body:JSON.stringify({symbol:'BTCUSDT',market:'SPOT',side:'SHORT'})}),{BUCKET:b});assert.equal(r.status,400);const p=await acquire('BTCUSDT',fakeFetch()),s=await acquire('BTCUSDT',fakeFetch(),{market:'SPOT'});await ingest(b,p);await ingest(b,s);for(const market of ['PERP','SPOT']){const response=await worker.fetch(new Request('https://test.invalid/api/snapshot?symbol=BTCUSDT&market='+market),{BUCKET:b});assert.equal((await response.json()).market,market);}});
+
+test('429 transitorio se reintenta una vez respetando Retry-After, sin inventar volumen',async()=>{let calls=0;const f=async()=>++calls===1?new Response('',{status:429,headers:{'Retry-After':'0'}}):Response.json({code:'00000',requestTime:Date.now(),data:[{symbol:'BTCUSDT',lastPr:'100'}]});const r=await bitget('ticker',{symbol:'BTCUSDT'},f);assert.equal(calls,2);assert.equal(r.data[0].lastPr,'100');});

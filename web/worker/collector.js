@@ -2,10 +2,12 @@ import {VERSION,UNIVERSE,FRAMES,HORIZONS,POLICIES,n,fact,closed,endOfBar,structu
 import {enrichSnapshot,sectorStrength,discountFromHistory,protocolIdeas} from './protocol.js';
 import {assetFor} from './universe.js';
 const clientCaches=new WeakMap();
+let nextPublicRequest=0;
+async function reservePublicSlot(fetcher){if(fetcher!==fetch)return;const now=Date.now(),slot=Math.max(now,nextPublicRequest);nextPublicRequest=slot+140;if(slot>now)await new Promise(resolve=>setTimeout(resolve,slot-now));}
 const message=e=>String(e?.message||e||'ERROR_DESCONOCIDO').slice(0,140);
 export async function bitget(path,params={},fetcher=fetch,market='PERP'){
  const prefix=market==='SPOT'?'/api/v2/spot/':'/api/v2/mix/',isSymbols=path==='symbols',u=new URL('https://api.bitget.com'+prefix+(isSymbols?'public/':'market/')+path);u.search=new URLSearchParams({...market==='PERP'?{productType:'USDT-FUTURES'}:{},...params});
- const r=await fetcher(u.toString(),{signal:AbortSignal.timeout(10000),headers:{Accept:'application/json'}});if(!r.ok)throw Error('BITGET_HTTP_'+r.status);const j=await r.json();if(j.code!=='00000'||j.data===undefined)throw Error('BITGET_'+String(j.code)+': '+String(j.msg||''));return {data:j.data,requestTime:n(j.requestTime),received:Date.now(),source:u.pathname};
+ let r;for(let attempt=0;attempt<2;attempt++){await reservePublicSlot(fetcher);r=await fetcher(u.toString(),{signal:AbortSignal.timeout(10000),headers:{Accept:'application/json'}});if(r.status!==429||attempt===1)break;const seconds=Number(r.headers.get('Retry-After')||1);if(!Number.isFinite(seconds)||seconds>10)break;await new Promise(resolve=>setTimeout(resolve,Math.max(0,seconds)*1000));}if(!r.ok)throw Error('BITGET_HTTP_'+r.status);const j=await r.json();if(j.code!=='00000'||j.data===undefined)throw Error('BITGET_'+String(j.code)+': '+String(j.msg||''));return {data:j.data,requestTime:n(j.requestTime),received:Date.now(),source:u.pathname};
 }
 export async function safely(fn){try{return {ok:true,...await fn()};}catch(e){return {ok:false,error:message(e)};}}
 export async function mapLimit(items,limit,fn){const out=new Array(items.length);let next=0;await Promise.all(Array.from({length:Math.min(limit,items.length)},async()=>{while(next<items.length){const i=next++;out[i]=await fn(items[i],i);}}));return out;}

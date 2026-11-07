@@ -23,7 +23,7 @@ export async function collect(bucket,symbol,fetcher=fetch){
  const now=Date.now(),key=snapshotKey(symbol),prior=await getObject(bucket,key);if(prior&&now-prior.received<30000)return {...freshen(prior,now),cache:true};
  const current=await bucket.get('collector/lease.json'),lease=current?await current.json():null;
  if(lease?.until>now)return prior?{...freshen(prior,now),collecting:true}:{collecting:true,received:null,symbol,message:'Primera adquisición en curso'};
- const owner=crypto.randomUUID(),written=await putObject(bucket,'collector/lease.json',{owner,until:now+60000},{onlyIf:current?{etagMatches:current.etag}:{etagDoesNotMatch:'*'}});
+ const owner=crypto.randomUUID(),written=await putObject(bucket,'collector/lease.json',{owner,until:now+300000},{onlyIf:current?{etagMatches:current.etag}:{etagDoesNotMatch:'*'}});
  if(!written)return prior?{...freshen(prior,now),collecting:true}:{collecting:true,symbol,received:null};
  try{
  const macro=await macroData(bucket,fetcher,Date.now());const raw=await acquire(symbol,fetcher),s=assemble(raw,prior);s.macro=macro;s.coverage=makeCoverage(s,true);s.storage='CLOUD_DURABLE';s.collectionMode='CAPTURA_PUBLICA_BAJO_DEMANDA';
@@ -51,7 +51,7 @@ export async function cloudFeed(fetcher=fetch,now=Date.now()){
  if(fetcher===fetch&&publicCloudCache?.until>now)return publicCloudCache.value;
  const read=async path=>{const r=await fetcher(FEED_ROOT+path+'?minute='+Math.floor(now/60000),{redirect:'manual',signal:AbortSignal.timeout(8000),headers:{Accept:'application/json'}});if(!r.ok)throw Error('GITHUB_FEED_HTTP_'+r.status);const text=await r.text();if(text.length>12000000)throw Error('CAPTURA_DEMASIADO_GRANDE');return JSON.parse(text);};
  try{const status=await read('status.json');if(!['OK','ERROR'].includes(status.state)||status.accountData!==false)throw Error('ESTADO_NUBE_NO_VALIDO');const raw=status.state==='OK'?await read('latest.json'):null;
-  const value={...status,state:status.state==='OK'&&(!Number.isFinite(status.lastSuccess)||now-status.lastSuccess>900000)?'STALE':status.state,raw,checkedAt:now};if(fetcher===fetch)publicCloudCache={until:now+60000,value};return value;
+  const value={...status,state:status.state==='OK'&&(!Number.isFinite(status.lastSuccess)||now-status.lastSuccess>900000)?'STALE':status.state,raw,checkedAt:now};if(fetcher===fetch)publicCloudCache={until:now+300000,value};return value;
  }catch(e){return {state:'UNKNOWN',errors:[err(e)],checkedAt:now,raw:null};}
 }
 async function mergedHistory(bucket){
