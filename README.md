@@ -1,50 +1,35 @@
-# bot-nuevo
+# Bot Nuevo · radar personal de liquidez
 
-Scanner de volumen y libro para perpetuos lineales USDT. Enriquece datos públicos; no crea órdenes, no consulta cuentas y no define un porcentaje de riesgo por cuenta.
+Aplicación web de lectura pública de Bitget USDT Futures, independiente de SNIPER/L65.
 
-## Componentes
+## Abrir
 
-- `bot_nuevo/scanner.py`: análisis local de snapshots existentes, sin HTTP ni dependencias externas.
-- `bot_nuevo/reader.py`: adaptador opcional para un cliente CCXT público ya disponible. Rechaza clientes con claves, deduplica símbolos y consulta tickers en lote cuando el exchange lo permite.
-- `bot_nuevo/aggressive.py`: política v3 agresiva sobre los mismos snapshots, con checklist separado por lado y zonas candidatas fechadas.
-- `tests/test_scanner.py`: pruebas reproducibles con datos sintéticos; no representan backtesting ni rentabilidad.
+https://bot-nuevo-liquidez.stablepiece.chatgpt.site/
 
-## Cambios respecto a SCANNER PRO v2
+Sitio privado: entrar con la cuenta ChatGPT propietaria. Incluye radar, fractales F1/F2/F3, cuatro políticas visibles, funding, contexto, SL/TP1/TP2/TP3/R:R, historial y una matriz de veinte controles. No consulta cuentas de exchange ni envía órdenes.
 
-Se excluyen velas abiertas y se valida continuidad, geometría y frescura. El volumen relativo compara la última vela cerrada con las veinte anteriores. CMF conserva en su denominador el volumen de velas planas. Los datos ausentes quedan `UNKNOWN`, nunca se convierten en un cero inventado.
+## Implementación activa
 
-El volumen firmado por color de vela se llama `signed_candle_volume_proxy`: no es delta de operaciones agresoras. El imbalance conserva signo y profundidad observada; una foto de cantidades visibles no demuestra persistencia, ejecuciones ni ausencia de spoofing.
+La fuente web está en `web/worker/`. El colector consulta Bitget desde el navegador y el servidor recalcula y guarda cada captura en almacenamiento durable. Usa un solo motor versionado; los indicadores no consumen tokens de modelos IA.
 
-La fórmula original se conserva como `attention_score`, una medida de actividad, **sin señal de compra/venta**. Sus valores absolutos pueden destacar presión bajista. Los filtros de rango y liquidez quedan explícitos; un score puede existir aunque un filtro falle. El consumidor debe comprobarlos. No hay ranking operativo, sizing, stop, take profit ni ejecución. No sustituye un coordinador de señales.
+Bitget devolvió HTTP 403 desde el nodo de hosting. La API pública permite consultas CORS desde el navegador; se verificó una actualización real y guardado desde Chrome. No se presenta la captura como un servicio 24/7 con la página cerrada.
 
-## Integración
+Ver [documentación web](web/README.md), [aceptación de veinte puntos](web/docs/ACEPTACION_20.md) y [captura móvil de QA](web/docs/mobile-qa.jpg).
 
-Preferir `analyze_snapshot(symbol, ticker, ohlcv, book, now_ms=..., venue=..., market=...)` cuando ya hay datos en caché. Recibe OHLCV y libro normalizados como CCXT. La política predeterminada es 15 minutos, 20 niveles y antigüedad máxima del libro de 5 segundos. Un reloj de libro ausente se considera desconocido. La profundidad parcial no recibe score completo.
+## Validación
 
-Si hace falta adquirir datos, `collect_public(exchange, symbols)` recibe un cliente público CCXT con rate limiting habilitado. Solicita 50 niveles y analiza los 20 primeros. Una política de cierre distinta requiere un `timeframe` coincidente. Devuelve todos los símbolos, incluidos errores explícitos; limitar a seis filas es una decisión de presentación. No repetir adquisiciones por perfil.
+37 pruebas de Node aprobadas: `cd web` y `node --test tests/*.test.js`. Incluyen paridad numérica con el núcleo Python anterior, adquisición, caducidad, concurrencia, ingesta, persistencia y riesgo neto. Artefacto ESM validado. Interfaz revisada a 360 px; no certifica hardware Android.
 
-Las cantidades OHLCV y del libro conservan las unidades del exchange. El proxy de volumen no permite comparar contratos diferentes sin normalización de unidades. El umbral de liquidez usa `quoteVolume` en USDT; si falta, el filtro queda desconocido.
+Lectura pública real de BTC verificada: 270 días, 39 semanas y 88 meses en la corrida de cierre. Es cobertura de una observación, no una garantía futura.
 
-## Validación y límites
+## Límites explícitos
 
-`python -m unittest discover -s tests`
+- MODERADO: propuesta intermedia inicial, sin calibración estadística. ULTRAAGRESIVO: no admitido sin L2 continuo.
+- Operaciones grandes de la muestra no identifican ballenas. Liquidez global, supply completo e identidades on-chain carecen de una fuente completa conectada.
+- FRED respondió HTTP 520 desde el hosting: su proxy USD queda UNKNOWN. Nunca pasa a cero ni a un contexto favorable.
+- Los planes guardados son manuales, sin fills observados. No hay rentabilidad certificada ni liquidación calculada con una cuenta real.
+- Los plugins del chat no se transfieren automáticamente al servidor. No hay proveedores de inferencia habilitados.
 
-Núcleo y adaptador verificados con fixtures y un cliente simulado. La integración CCXT/Bitget en vivo todavía requiere una prueba de contrato con la versión y permisos de red del entorno de despliegue. No hay servicio desplegado ni interfaz añadida en este cambio.
+## Python anterior
 
-## Perfil AGRESIVO v3
-
-`collect_public(exchange, symbols, profile="AGRESIVO")` conserva una adquisición por símbolo. Si los snapshots ya existen, usar `analyze_aggressive` directamente sin nuevas consultas. La lista de diez monedas del ejemplo no limita el universo recibido; TOP_N=8 solo corresponde a presentación.
-
-Política `v3-aggressive-1`: liquidez mínima 200.000 USDT, rango máximo 5,5%, climax desde 2,2 veces el volumen previo. Conserva los pesos del score v3 y publica cada aporte. El mayor peso al libro no convierte cantidades visibles en operaciones ejecutadas.
-
-El checklist conserva diez condiciones y los cortes 6/10 y 4/10, pero evalúa LONG y SHORT por separado. Informa puntos y desconocidos. Seis puntos con presión opuesta, datos incompletos o filtros incumplidos no se publican como confluencia alta. Son reglas correlacionadas; los puntos no estiman probabilidad, ventaja estadística o riesgo por cuenta. La falta de alineación no elimina zonas tempranas ni es un veto de admisión de un coordinador externo.
-
-`directional_proxy` combina imbalance, CMF y volumen por color de vela. Se etiqueta como proxy; no es OFI, CVD ni delta real. La absorción queda UNKNOWN: OHLCV y una foto del libro no prueban negociación contra liquidez pasiva ni reposición.
-
-El detector de zonas **cambia explícitamente la regla del código v3 suministrado**: busca la última vela opuesta entre las tres anteriores a un impulso cerrado, con cuerpo >48% del rango, volumen >1,45 veces sus veinte velas anteriores y cierre que rompe el extremo de las cinco velas previas. La zona usa el rango completo de la vela opuesta, sin redondear precios a cuatro decimales. Es un candidato heurístico local; no reemplaza los order blocks canónicos de SNIPER.
-
-Cada candidato publica origen, cierre de detección, método e invalidación. Después del impulso se etiqueta UNTESTED, RETESTED o INVALIDATED. Una mecha de vela cerrada que cruza el borde distal invalida definitivamente ese evento dentro de la serie recibida. La vela abierta no confirma estructura; el coordinador de una operación necesitaría controlar precio e invalidación intrabar por separado. El promedio del volumen de detección nunca incluye velas futuras.
-
-Esta evaluación es de ventana y no mantiene Diario ni estado entre reinicios. Los IDs de evento son locales al snapshot; para persistirlos se deben combinar con venue, mercado, símbolo y timeframe. No configura leverage, compras, SL ni TP.
-
-Referencia técnica oficial: https://docs.ccxt.com/docs/manual . La vela corriente puede estar incompleta y algunos exchanges no incluyen timestamp del libro; ambos casos se tratan explícitamente.
+`bot_nuevo/` conserva el núcleo Python de snapshots y el adaptador CCXT opcional, con sus treinta pruebas locales: `python -m unittest discover -s tests`. Su conexión CCXT/Bitget en vivo no se da por verificada por la prueba REST del motor web.
