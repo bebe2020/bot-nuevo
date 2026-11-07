@@ -39,3 +39,22 @@ function rsiSeriesLast(b){return b.length?indicatorSeries(b).rsi.at(-1):null;}
 export function marketNarrative(s){const context=['1H','4H','1Dutc','1Wutc'].map(tf=>tf+': '+(s.structures[tf]?.value?.regime||s.structures[tf]?.status||'UNKNOWN')),rsi=s.indicators?.['4H']?.rsi,fib=s.indicators?.['4H']?.fib,vol=volume(s.closed['15m']||[]),asset=assetFor(s.symbol);return {title:asset?.proyecto??s.symbol,tags:asset?.narrativas||[],text:context.join(' · ')+'. '+(rsi===null?'RSI 4H no disponible. ':'RSI 4H '+rsi.toFixed(1)+(rsi<30?': sobreventa, no confirma un piso. ':rsi>70?': sobrecompra, no confirma un techo. ':': zona intermedia. '))+(fib?.status==='OK'?'Precio en '+fib.location.toLowerCase()+' del último impulso confirmado. ':'Fibonacci sin anclas válidas. ')+(vol.status==='OK'?'Volumen relativo '+vol.value.ratio.toFixed(2)+'× en última vela cerrada. ':'Volumen sin cobertura suficiente. '),method:'LECTURA_DE_REGLAS_Y_DATOS; SIN_LLAMADAS_A_IA',notForecast:true};}
 export function sectorStrength(universe){const median=xs=>{const a=xs.sort((x,y)=>x-y),i=Math.floor(a.length/2);return a.length?(a.length%2?a[i]:(a[i-1]+a[i])/2):null;};return Object.entries(TAXONOMY.categories).map(([id,label])=>{const members=ASSETS.filter(a=>a.narrativas.includes(id)).map(a=>a.base+'USDT');if(!members.length)return null;const rows=universe.filter(r=>members.includes(r.symbol));return {id,label,total:members.length,known:rows.filter(r=>r.change!==null&&r.change!==undefined).length,median24h:median(rows.map(x=>x.change===null||x.change===undefined?null:x.change*100).filter(x=>x!==null)),median7d:median(rows.map(x=>x.return7d).filter(x=>n(x)!==null)),median30d:median(rows.map(x=>x.return30d).filter(x=>n(x)!==null)),symbols:members,asof:Math.min(...rows.map(x=>x.sourceAsOf).filter(x=>n(x)!==null)),method:'MEDIANA_DE_RETORNOS; GRUPOS_SOLAPADOS; NO_FLUJO_NETO'};}).filter(Boolean);}
 export {discountFromHistory};
+
+export function protocolReadiness(s, horizon, profile, idea = null, now = Date.now()) {
+ if (idea) return evaluateIdea(s, idea, profile, now);
+ const protocol = PROTOCOLS[horizon];
+ const contexts = protocol.frames.map(tf => ({tf,status:tf==='36M'?s.cycle?.status:s.structures[tf]?.status,
+   regime:s.structures[tf]?.value?.regime??null,bars:tf==='36M'?s.cycle?.value?.months:(s.closed[tf]?.length||0),
+   asof:s.structures[tf]?.value?.asof??null}));
+ const vol = volume(s.closed[protocol.frames[0]] || []);
+ const structural = protocol.kind === 'ESTRUCTURAL';
+ const contextText = contexts.map(x => x.tf + ': ' + (x.regime || x.status || 'UNKNOWN') + ' (' + x.bars + ' barras)').join(' · ');
+ const keys = {
+  K1:keyFact(contexts.every(x=>x.status==='OK')?'PASS':'UNKNOWN',contextText,contexts),
+  K2:keyFact('UNKNOWN',vol.value?'CMF '+vol.value.cmf.toFixed(3)+' · volumen relativo '+vol.value.ratio.toFixed(2)+'×; falta tesis direccional para evaluar confluencia.':vol.reason||'Sin volumen cerrado suficiente',vol.value),
+  K3:keyFact(structural?'NOT_APPLICABLE':'UNKNOWN',structural?'Contexto estructural; no emite gatillo táctico.':'Sin evento vigente con geometría para '+protocol.frames[0]+'. Esperar barrido/reclaim cerrado, retesteo o entrada Fibonacci según la regla.'),
+  K4:keyFact('NOT_APPLICABLE','Entrada, stop y objetivos aparecen cuando existe una tesis válida; los datos del contexto siguen visibles.')
+ };
+ const pending = [structural?'Consultar el radar del mercado seleccionado.':profile==='ULTRAAGRESIVO'?'Falta evento vigente y registro L2 continuo medido.':profile==='CONSERVADOR'?'Esperar evento cerrado, contexto alineado y flujo compatible.':profile==='MODERADO'?'Esperar evento cerrado, contexto alineado y ausencia de flujo contrario.':'Vigilar zona y evento; una anticipada conserva su confirmación pendiente.'];
+ return {profile,admission:structural?'CONTEXTO_ESTRUCTURAL':'VIGILANCIA_SIN_EVENTO',phase:'SIN_EVENTO',keys,pending,contexts,evaluatedAt:now,kind:'OBSERVACION'};
+}
