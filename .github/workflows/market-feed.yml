@@ -1,0 +1,29 @@
+name: Captura pública de mercado
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/market-feed.yml'
+      - 'web/scripts/cloud-feed.mjs'
+      - 'web/worker/**'
+permissions:
+  contents: write
+concurrency:
+  group: public-market-feed
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verificar cálculos
+        working-directory: web
+        run: node --test tests/*.test.js
+      - name: Capturar y publicar datos públicos
+        run: node web/scripts/cloud-feed.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
