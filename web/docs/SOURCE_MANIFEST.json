@@ -69,8 +69,8 @@
     },
     {
       "path": "worker/kronos-capture.json",
-      "bytes": 113513,
-      "sha256": "d1135d549e50d38e0e6c31324455db5fa34b8d6cf45f1895b1f4efd7d2672c73"
+      "bytes": 113527,
+      "sha256": "524a0eefb2d284503aaf150254b4597ca1cf31dab43a1fb764bf09acf7350d5e"
     },
     {
       "path": "worker/lab.js",
@@ -89,8 +89,8 @@
     },
     {
       "path": "worker/panels.js",
-      "bytes": 26261,
-      "sha256": "7f8719507c48930e09afac21d79531e996d78175249588b83f0c6ba7b1893b98"
+      "bytes": 26704,
+      "sha256": "b5f9f59b672b0f71fdb5f5bfdaf494cce60dcdc34dde4c6ee14a43a6b089bd05"
     },
     {
       "path": "worker/paper.js",
@@ -483,5 +483,13 @@
         "functions": []
       }
     ]
+  },
+  "followup": {
+    "checks": "103/103",
+    "productionHealth": "HTTP_200",
+    "defiRanking": 80,
+    "hyperliquidMatched": 39,
+    "coinGeckoObserved": "HTTP_429_CONSERVA_DATOS_FECHADOS",
+    "kronosGeneratedAt": 1794090694580
   }
 }
