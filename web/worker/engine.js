@@ -1,8 +1,9 @@
-// Núcleo web canónico v1. Datos públicos, sin cuentas ni órdenes.
-export const VERSION = 'terminal-1.0';
-export const UNIVERSE = ['BTC','ETH','SOL','XRP','HYPE','DOGE','SUI','LINK','NEAR','BNB'].map(x=>x+'USDT');
-export const FRAMES = {'5m':300000,'15m':900000,'1H':3600000,'4H':14400000,'1Dutc':86400000,'1Wutc':604800000,'1Mutc':null};
-export const HORIZONS = {SCALP:['5m','15m','1H'],DIARIO:['15m','1H','4H'],SEMANAL:['4H','1Dutc','1Wutc'],MENSUAL:['1Dutc','1Wutc','1Mutc'],TRIMESTRAL:['1Wutc','1Mutc','3M'],CICLO_3_ANOS:['1Mutc','3M','36M']};
+import {SYMBOLS} from './universe.js';
+// Motor numérico compartido. Datos públicos, sin cuentas ni órdenes.
+export const VERSION = 'terminal-2.0';
+export const UNIVERSE = SYMBOLS;
+export const FRAMES = {'1m':60000,'5m':300000,'15m':900000,'30m':1800000,'1H':3600000,'2H':7200000,'4H':14400000,'6H':21600000,'8H':28800000,'12H':43200000,'1Dutc':86400000,'1Wutc':604800000,'1Mutc':null};
+export const HORIZONS = {MICRO_PIVOTE:['1m','5m','15m'],SCALP:['5m','15m','1H'],DIARIO:['15m','1H','4H'],SEMANAL:['4H','1Dutc','1Wutc'],MENSUAL:['1Dutc','1Wutc','1Mutc'],TRIMESTRAL:['1Wutc','1Mutc','3M'],CICLO_3_ANOS:['1Mutc','3M','36M']};
 export const POLICIES = {
  AGRESIVO:{volume:200000,range:5.5,vr:1.35,climax:2.2,cmf:.05,book:.15,flowBook:.12,flowCmf:.03,zoneVol:1.45,body:.48,high:6,medium:4,osc:8,score:5.5,rangeCheck:4.2,weights:[1.8,.04,1.8,9,16,.3]},
  CONSERVADOR:{volume:300000,range:4.5,vr:1.6,climax:2.5,cmf:.08,book:.20,flowBook:.18,flowCmf:.05,zoneVol:1.8,body:.55,high:7,medium:5,osc:15,score:6.5,rangeCheck:3.5,weights:[2,.03,1.5,8,12,.4]}
@@ -84,19 +85,6 @@ export function riskPlan({side,entry,stop,targets,quantity,entryFee,exitFee,fund
  const sign=side==='LONG'?1:-1,risk=sign*(entry-stop);if(risk<=0||targets.some(t=>sign*(t-entry)<=0)||targets.some((t,i)=>i>0&&sign*(t-targets[i-1])<=0))throw Error('GEOMETRIA_INVALIDA');
  const loss=quantity*risk+quantity*(entry*entryFee+stop*exitFee)-fundingCash;
  return {notional:entry*quantity,lossAtStop:loss,legs:targets.map(t=>{const gross=quantity*sign*(t-entry),net=gross-quantity*(entry*entryFee+t*exitFee)+fundingCash;return {target:t,gross,net,rrGross:sign*(t-entry)/risk,rrNet:loss>0?net/loss:null};}),equalThirdsNet:targets.reduce((s,t)=>s+(quantity/3)*(sign*(t-entry)-entry*entryFee-t*exitFee),0)+fundingCash,note:'CADA_LEG_SIMULA_SALIDA_TOTAL; TERCIOS_SEPARADOS. NO_INCLUYE_DESLIZAMIENTO. NO_ENVIA_ORDENES'};
-}
-export function candidatePlans(snapshot,horizon){
- const map=HORIZONS[horizon];if(!map)return [];
- const s=snapshot.structures[map[0]],context=snapshot.structures[map[1]];if(s?.status!=='OK')return [];
- const formed=s.value.sweeps.at(-1);if(!formed)return [];
- const {side,extreme}=formed,a=s.value.atr;if(!a)return [];
- const sign=side==='LONG'?1:-1,places=n(snapshot.instrument?.pricePlace),step=n(snapshot.instrument?.priceEndStep),tick=places!==null&&places>=0&&places<=12&&step>0?step*10**(-places):null;
- const rounded=(p,mode='round')=>tick?Number((Math[mode](p/tick)*tick).toFixed(places)):p;
- const entry=rounded(formed.level),stop=rounded(extreme-sign*.1*a,side==='LONG'?'floor':'ceil');if(sign*(entry-stop)<=0)return [];
- const after=(snapshot.closed[map[0]]||[]).filter(r=>endOfBar(r[0],map[0])>formed.detected);
- if(after.some(r=>side==='LONG'?r[3]<=stop:r[2]>=stop)||n(snapshot.ticker.lastPr)!==null&&sign*(Number(snapshot.ticker.lastPr)-stop)<=0)return [];
- const targets=[...new Set(Object.values(snapshot.structures).flatMap(x=>x.status==='OK'?x.value.pivots.filter(p=>p.type===(side==='LONG'?'HIGH':'LOW')).map(p=>rounded(p.price,side==='LONG'?'floor':'ceil')):[]).filter(p=>sign*(p-entry)>0))].sort((a,b)=>sign*(a-b)).slice(0,3);
- return [{id:[VERSION,snapshot.symbol,horizon,side,formed.detected,entry,stop].join(':'),side,entry,stop,targets,phase:context?.status==='OK'&&context.value.regime===side?'RECLAIM_CERRADO_CONTEXTO_ALINEADO':'ANTICIPACION_CONTRATENDENCIA_O_CONTEXTO_PENDIENTE',formed:formed.detected,rr:targets.map(t=>sign*(t-entry)/(sign*(entry-stop))),source:'BARRIDO_20_BARRAS_CON_RECLAIM; BUFFER_SL_0.1_ATR_PROPUESTO',execution:'MANUAL_NO_EJECUTADA'}];
 }
 export function fredCSV(text,id){
  const lines=text.trim().split(/\r?\n/),head=lines.shift().split(',');if(head.length!==2||head[1]!==id||!['DATE','observation_date'].includes(head[0]))throw Error('FRED_CSV_INVALIDO');

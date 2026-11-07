@@ -1,9 +1,7 @@
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
-const paths=['worker/engine.js','worker/collector.js','worker/live.js','worker/live-ui.js','worker/ui.js','worker/service.js'];
-const chunks=await Promise.all(paths.map(p=>readFile(p,'utf8')));
-await mkdir('dist/server',{recursive:true});await mkdir('dist/.openai',{recursive:true});
-const service=paths.indexOf('worker/service.js');
-for(const [marker,path] of Object.entries({ENGINE:'worker/engine.js',COLLECTOR:'worker/collector.js',LIVE:'worker/live.js',LIVE_UI:'worker/live-ui.js'}))chunks[service]=chunks[service].replace("'__BUILD_"+marker+"_MODULE__'",JSON.stringify(chunks[paths.indexOf(path)]));
-const source=chunks.map(s=>s.replace(/^import .*from '\.\/[^']+';\n/gm,'')).join('\n');
-await writeFile('dist/server/index.js',source);await writeFile('dist/.openai/hosting.json',await readFile('.openai/hosting.json','utf8'));
-console.log('Built canonical engine + UI + service, without external dependencies.');
+const serverPaths=['worker/universe.js','worker/engine.js','worker/indicators.js','worker/protocol.js','worker/collector.js','worker/ui.js','worker/service.js'];
+const clientFiles=['universe.js','engine.js','indicators.js','protocol.js','collector.js','live.js','chart.js','app.js','terminal.css'];
+const assets={};for(const file of clientFiles)assets['/'+file]={body:await readFile('worker/'+file,'utf8'),type:file.endsWith('.css')?'text/css; charset=utf-8':'application/javascript; charset=utf-8'};
+assets['/vendor/lightweight-charts.js']={body:await readFile('node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.mjs','utf8'),type:'application/javascript; charset=utf-8'};
+const chunks=await Promise.all(serverPaths.map(p=>readFile(p,'utf8')));chunks[chunks.length-1]=chunks.at(-1).replace("'__BUILD_PUBLIC_ASSETS__'",JSON.stringify(assets));
+const source=chunks.map(s=>s.replace(/^import .*from '\.\/[^']+';\n/gm,'').replace(/^export \{[^}]+\};$/gm,'')).join('\n');await mkdir('dist/server',{recursive:true});await mkdir('dist/.openai',{recursive:true});await writeFile('dist/server/index.js',source);await writeFile('dist/.openai/hosting.json',await readFile('.openai/hosting.json','utf8'));console.log('Built terminal 54, pure analytics and self-hosted chart assets.');

@@ -1,5 +1,5 @@
 // Captura pública programable. Nunca lee cuentas ni datos del sitio privado.
-import {acquire,assemble} from '../worker/collector.js';
+import {acquire,assemble,primeCache} from '../worker/collector.js';
 import {VERSION} from '../worker/engine.js';
 import {pathToFileURL} from 'node:url';
 export const DATA_BRANCH='market-data';
@@ -17,7 +17,7 @@ export async function publishFeed({repository,token,raw,error=null,fetcher=fetch
  const api=(p,m,b)=>githubRequest(repository,token,p,m,b,fetcher);let ref;
  try{ref=await api('/git/ref/heads/'+DATA_BRANCH);}catch(e){if(e.status!==404)throw e;const main=await api('/git/ref/heads/main');ref=await api('/git/refs','POST',{ref:'refs/heads/'+DATA_BRANCH,sha:main.object.sha});}
  const parent=ref.object.sha,commit=await api('/git/commits/'+parent),entries=[];
- const status={lastAttempt:now,state:error?'ERROR':'OK',source:'BITGET_PUBLICO',targetIntervalMinutes:5,errors:error?[String(error).slice(0,160)]:[],accountData:false};
+ const status={version:VERSION,universe:54,lastAttempt:now,state:error?'ERROR':'OK',source:'BITGET_PUBLICO',targetIntervalMinutes:5,errors:error?[String(error).slice(0,160)]:[],accountData:false};
  if(raw){const summary=publicSummary(raw);raw.version=VERSION;status.lastSuccess=raw.received;status.sourceAsOf=summary.asof;
   const day=new Date(raw.received).toISOString().slice(0,10),path='history/'+day+'.json';let history=[];
   try{const file=await api('/contents/'+path+'?ref='+DATA_BRANCH);history=JSON.parse(Buffer.from(file.content,'base64').toString('utf8')).records||[];}catch(e){if(e.status!==404)throw e;}
@@ -30,7 +30,7 @@ export async function publishFeed({repository,token,raw,error=null,fetcher=fetch
 }
 export async function main(){
  const repository=process.env.GITHUB_REPOSITORY,token=process.env.GITHUB_TOKEN;let raw;
- try{raw=await acquire('BTCUSDT');publicSummary(raw);}catch(e){if(token)await publishFeed({repository,token,error:e.message});throw e;}
+ try{if(/^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/.test(repository||'')){try{const prior=await fetch('https://raw.githubusercontent.com/'+repository+'/market-data/latest.json',{signal:AbortSignal.timeout(10000)});if(prior.ok)primeCache(await prior.json());}catch{}}raw=await acquire('BTCUSDT');publicSummary(raw);}catch(e){if(token)await publishFeed({repository,token,error:e.message});throw e;}
  const result=await publishFeed({repository,token,raw});console.log(JSON.stringify({state:result.status.state,sourceAsOf:result.status.sourceAsOf,received:raw.received,commit:result.commit,branch:DATA_BRANCH}));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(e=>{console.error('Captura pública fallida: '+e.message);process.exitCode=1;});

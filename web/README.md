@@ -1,62 +1,50 @@
-# Bot Nuevo · terminal personal de liquidez v1
+# Bot Nuevo · Terminal 54
 
-Aplicación de lectura pública de Bitget USDT Futures con radar, fractales, perfiles, funding, historial en nube y calculadora manual de SL/TP1/TP2/TP3/R:R. Sin claves de exchange, cuentas privadas ni envío de órdenes.
+Proyecto personal independiente de SNIPER/Océano. Motor numérico compartido, transporte público y una interfaz sobre el mismo contrato de datos; no modifica ni incorpora el lanzador L65.
 
-## Fuente canónica de esta versión web
+## Implementación actual
 
-- `worker/engine.js`: cálculos puros y políticas versionadas. Compartidos por servidor y pruebas.
-- `worker/collector.js`: adquisición REST pública compartida por navegador y pruebas.
-- `worker/service.js`: servidor HTTP y persistencia de objetos JSON. Un lease condicional mantiene una sola adquisición en vuelo. No contiene credenciales.
-- `worker/ui.js`: interfaz HTML responsive; no recalcula señales con reglas divergentes. Su gráfico usa las velas recibidas.
-- `scripts/build.mjs`: empaqueta esas fuentes en un Worker ESM sin dependencias de terceros. `dist` es un resultado reproducible, no otra implementación.
+- Universo exacto de 54 activos y taxonomía multietiqueta recuperados del archivo canónico `sniper_narrativas_54.json` revisado el 16/10/2026. Ninguna sustitución por monedas de mayor volumen. Catálogo Bitget SPOT/PERP actual comprobado cada hora; las filas sin instrumento permanecen visibles.
+- Precios WebSocket públicos para los instrumentos activos; fallback REST explícito. Reconexión y heartbeat; source timestamp separado de recepción y de velas cerradas. Sin controles de pausa o actualización en el flujo principal.
+- TradingView Lightweight Charts 5.1.0, servido localmente: velas, escala de precios, crosshair/zoom, EMA9/21/50/100/200, volumen y RSI Wilder14 en paneles separados. Fibonacci causal, OB/FVG y POC/VAH/VAL aproximados con controles de visibilidad. La vela provisional usa precios recibidos y queda fuera de las confirmaciones e indicadores cerrados.
+- Trece temporalidades nativas/derivadas y trimestre calendario: 1m,5m,15m,30m,1H,2H,4H,6H,8H,12H,1Dutc,1Wutc,1Mutc,3M. 8H se deriva de 4H; 2H SPOT de 1H; semanas del radar se agregan desde días completos alineados al lunes UTC. Se rechazan huecos. No se inventa EMA200 con 199 barras.
+- Descubrimiento 54, mapa de calor (24h, caída desde máximo mensual observado, RSI4H), filtros por sector y descuento, matriz de estructura. Caída/descuento no equivalen a acumulación ni a un ATH global certificado.
+- Reglas explícitas de barrido/reclaim, retesteo tras ruptura y anticipación Fibonacci. Micro, scalp, diario, semanal y mensual; trimestre/ciclo son contexto estructural. Cuatro perfiles evalúan hechos y geometría compartidos. Ultra permanece sin admisión operativa sin L2 continuo.
+- Protocolo K1 contexto/K2 evidencia de flujo y proxies/K3 evento cerrado/K4 geometría. Se conserva anticipación con conflictos explicados; flujo contrario no se vende como confirmación. Ningún score representa probabilidad de acierto.
+- Entrada, stop, tres objetivos disponibles y R:R bruto; calculadora de costes/R:R neto y planes manuales durables. Los objetivos Fibonacci proyectados se distinguen del extremo observado. Identidad de evento/stop estable y revisión de geometría incluye objetivos; las invalidaciones intrabar observadas se conservan localmente. No se imputa fill, TP o PnL realizado.
+- Océano: sectores por conjuntos únicos de símbolos, medianas 24h/7d/30d con cobertura, cuatro radares trimestral/ciclo SPOT/PERP. No replica todos los módulos macro del programa antiguo.
+- GitHub Actions: capturas públicas programadas con objetivo de cinco minutos en `market-data`; reusa las velas que siguen siendo válidas sin alterar sus relojes. El horario puede demorarse o suspenderse por las reglas de GitHub. La pantalla muestra el último éxito real. No almacena cada tick con el navegador cerrado.
 
-La versión web consulta REST público de Bitget desde el navegador. El servidor recalcula la captura recibida y guarda el historial. El nodo de hosting devolvió HTTP 403 desde Bitget; no se depende de ese acceso para actualizar. El código Python/CCXT del repositorio anterior se conserva como referencia y adaptador opcional, sin declararlo integración CCXT en vivo. Dos fixtures de paridad verifican los indicadores de volumen del motor web contra el núcleo Python previo. Los nuevos módulos y la UI tienen pruebas independientes.
+## Arquitectura única
 
-## Alcance de datos
+| Archivo | Responsabilidad |
+| --- | --- |
+| worker/universe.js | Universo/taxonomía curados, independientes del mercado disponible |
+| worker/engine.js | Validación OHLCV, estructura, perfiles base y economía de salidas |
+| worker/indicators.js | Series EMA/RSI/MACD/OBV/VWAP, Fibonacci y perfil por rango |
+| worker/protocol.js | Protocolos, geometría, evaluación de perfiles y narrativa determinista |
+| worker/collector.js | Catálogo/adquisición/caché por venue-mercado-símbolo-TF; snapshot único |
+| worker/live.js | Transporte WS público, relojes, heartbeat y reconexión |
+| worker/app.js + chart.js | Controlador de pantalla y gráfico interactivo |
+| worker/ui.js + terminal.css | Estructura visual y estilos responsive |
+| worker/service.js | Validación/persistencia R2 y API privada |
 
-Universo inicial: los diez símbolos del scanner suministrado por el usuario. No se presenta como el universo de 54 activos de SNIPER. Fuente, venue y mercado permanecen explícitos. Se adquieren tickers, contratos, velas, libro, operaciones, OI y funding. Los fallos quedan UNKNOWN; no desaparece la moneda por un error.
+Sin monkey patches, wrappers por versión, SQLite ni claves de exchange. El programa Python original permanece como proyecto distinto. Los registros privados se conservan al cambiar de versión; SPOT/PERP usan claves separadas.
 
-Temporalidades de entrada: 5m, 15m, 1H, 4H, 1D UTC, 1W UTC y 1M UTC. Se excluyen velas abiertas; trimestres son grupos calendario completos de tres meses. Ciclo de tres años requiere al menos 36 meses cerrados. No se inventa historia de tokens nuevos ni una fase futura del ciclo.
+## Validación
 
-Estructura y zonas son heurísticas explícitas: fractal de dos velas por lado, ruptura de cierre, barrido de los veinte extremos previos con reclaim, FVG de tres velas, última vela contraria antes de impulso/ruptura. Los pools de liquidez son estimaciones por estructura de precio, no órdenes stop observadas ni mapas de liquidaciones reales.
+`npm ci`, `npm test`, `npm run build`, `npm run validate`. El build incluye activos cliente y Worker ESM. No depende de un CDN para dibujar el gráfico.
 
-## Perfiles y riesgo
+Primera adquisición real observada: 54 filas, 51 PERP activos en Bitget, 14 temporalidades de BTC válidas. Catálogos actuales SPOT y PERP no garantizan 54/52 instrumentos del inventario histórico. El detalle y las causas por activo son la evidencia de cobertura.
 
-AGRESIVO y CONSERVADOR usan los umbrales suministrados, con correcciones de causalidad y dirección. MODERADO es una propuesta intermedia inicial, no calibrada, con redondeo conservador del conteo de puntos. CONSERVADOR compara 4H/1D; MODERADO compara 1H/4H. ULTRAAGRESIVO se muestra sin admisión: falta L2 continuo. Ningún perfil selecciona capital, apalancamiento o riesgo por cuenta.
+La primera lectura completa necesita calentar cachés y puede tomar aproximadamente un minuto en esta ejecución; depende de red/cobertura. Primero aparece el activo focal y después progresa el radar. Los precios WS siguen actualizándose durante ese trabajo. El caché reduce consultas posteriores; no se promete una latencia universal.
 
-Las propuestas de entrada requieren un barrido con cierre/reclaim vigente. El stop propuesto usa el extremo con un buffer explícito de 0,1 ATR; no es una regla canónica de SNIPER. Los objetivos provienen de pivotes observados de los TF adquiridos. Si no hay tres objetivos, faltan; no se dibujan tres precios solo para completar una ficha. No se afirma que la entrada se llenó ni que un TP ocurrió después del fill.
+## Límites que siguen abiertos
 
-La calculadora recibe cantidad y comisiones explícitas. Distingue salida total en cada TP de una alternativa a tercios. Funding se trata como flujo de caja variable de un escenario; no se anualiza ni proyecta automáticamente al futuro. No estima liquidación sin parámetros reales de cuenta. Los planes guardados son `PLAN_MANUAL_SIN_FILL`, nunca trades rentables certificados.
+No replica las 60 estrategias ni todos los exportadores del SNIPER original. Las tres familias implementadas son reglas explícitas nuevas, sin equivalencia estadística certificada con aquel motor. No hay ejecución de órdenes, cuenta/leverage/sizing personal configurados, mapa de liquidaciones observado, identidad de ballenas, noticia/calendario automático, cobertura global de liquidez/supply ni IA predictiva validada. Homónimos requieren vincular proyecto y contrato, no solo ticker. FRED sin fuente vigente sigue UNKNOWN.
 
-## Historial y caducidad
+Los plugins del chat se usan para desarrollar/verificar (GitHub, Firecrawl y pruebas de navegador). No transfieren automáticamente sesiones, créditos o claves al sitio. Indicadores, reglas y narrativa se calculan sin llamadas a modelos: no consumen tokens de IA por captura. Integrar un proveedor de modelos requeriría su conexión y cuotas reales; no se afirma que haya tokens gratuitos habilitados.
 
-Un objeto inmutable por activo/minuto consultado guarda un resumen; `latest/<símbolo>` conserva el último payload completo. El historial no depende de localStorage ni del teléfono. Las preferencias de pantalla no contienen secretos. El lease usa comparación de ETag para evitar doble escritor; solicitudes concurrentes reciben la captura previa sin cambiar su fecha.
+## Licencia del gráfico
 
-La pantalla recibe tickers públicos por WebSocket para los diez perpetuos, repinta cada segundo y muestra el reloj del exchange, mensajes recibidos, cambios reales y reconexión. Si el WS no entrega un precio reciente, consulta REST cada 3 s y lo identifica como REST. Pausa detiene ambos caminos. Al volver al primer plano se revisa y restablece la conexión. El gráfico superpone el último precio; BOS, zonas e indicadores siguen usando velas cerradas.
-
-El análisis completo se captura cada 30 s mientras la pantalla está abierta. El libro de 20 niveles caduca a los 5 s: un ticker L1 nuevo no renueva su edad ni habilita ULTRAAGRESIVO. GitHub Actions ejecuta el colector público con un objetivo de 5 minutos y conserva latest, estado y resumen diario de diez precios en la rama market-data. El detalle multitemporal de esa captura es BTC; otros detalles se adquieren al seleccionar el activo. GitHub puede retrasar ejecuciones; después de 60 días sin actividad en main puede desactivar la programación. El sitio muestra la última captura real y marca atraso desde 15 min. No es L2 continuo ni ejecución de órdenes.
-
-El workflow usa el token efímero de GitHub Actions, con escritura de contenidos, solo para publicar la rama market-data. No recibe credenciales del sitio, cuentas del exchange ni planes privados. El sitio privado lee esos datos públicos, recalcula y preserva sus fechas. El historial combina los registros privados con los precios públicos del día; días anteriores siguen en GitHub. Reintentos fallidos nunca fabrican precios ni actualizan latest.
-
-## Fuentes parciales
-
-- Operaciones grandes: hasta cien prints recientes, con ID y dirección publicados por la API. No identifica ballenas, propietarios o un CVD completo. La absorción sigue UNKNOWN.
-- Liquidez USD: WALCL/1000 − WTREGEN/1000 − RRPONTSYD, en miles de millones de USD y fecha común. WALCL es nivel de miércoles, WTREGEN promedio semanal y RRP dato diario. Es un proxy de la Fed, no liquidez global. HTML, falta de componente o fechas incompatibles no se convierten en cero.
-- Token supply, identidades on-chain, mapa real de liquidaciones y estadística de rentabilidad no tienen una fuente completa conectada. El panel de cobertura muestra esos límites.
-- Plugins del chat y cuotas de modelos no se transfieren a un backend. No hay proveedores IA habilitados ni llamadas a modelos por tick.
-
-## Ejecutar comprobaciones
-
-`node --test tests/*.test.js`
-
-`node scripts/build.mjs`
-
-`node scripts/validate-artifact.mjs`
-
-El preview interno se inicia con `sites-preview start <checkout>`. El modo de fixtures es exclusivo del servidor local, requiere `.local/fixture-mode` y pone una advertencia de simulación en pantalla; no se incluye en el Worker publicado.
-
-## Aceptación
-
-Ver `docs/ACEPTACION_20.md`. Una versión web funcional no equivale a tener todos los feeds, una estrategia estadísticamente certificada o una cuenta de trading autorizada.
-
-La lectura histórica usa hasta tres páginas diarias/semanales para reunir cobertura suficiente, sin saltar el extremo temporal entre páginas. Prueba pública real de BTC: 270 días, 39 semanas y 88 meses en la corrida de verificación; la cobertura se vuelve a medir en cada adquisición. El proxy macro del hosting devolvió HTTP 520 y queda UNKNOWN.
+TradingView Lightweight Charts™. Copyright (с) 2025 TradingView, Inc. https://www.tradingview.com/ . Apache-2.0; licencia y aviso preservados. Los datos del gráfico provienen de Bitget.

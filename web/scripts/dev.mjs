@@ -16,8 +16,9 @@ const server=http.createServer(async(req,res)=>{try{
  const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v!==undefined)headers.set(k,Array.isArray(v)?v.join(','):v);
  const request=new Request(url,{method:req.method,headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
  let r;const fixture=existsSync('.local/fixture-mode');
- if(['/engine.js','/collector.js','/live.js','/live-ui.js'].includes(url.pathname))r=new Response(readFileSync('worker'+url.pathname,'utf8'),{headers:{'Content-Type':'application/javascript'}});
- else if(url.pathname==='/__qa/mobile')r=new Response('<!doctype html><html><head><title>QA móvil · 360px</title></head><body style="margin:0;background:#27364a"><iframe title="Bot Nuevo 360px" src="/?paused=1" style="display:block;width:360px;height:840px;border:0;margin:auto"></iframe></body></html>',{headers:{'Content-Type':'text/html'}});
+ if(['/universe.js','/engine.js','/indicators.js','/protocol.js','/collector.js','/live.js','/chart.js','/app.js','/terminal.css'].includes(url.pathname))r=new Response(readFileSync('worker'+url.pathname,'utf8'),{headers:{'Content-Type':url.pathname.endsWith('.css')?'text/css':'application/javascript'}});
+ else if(url.pathname==='/vendor/lightweight-charts.js')r=new Response(readFileSync('node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.mjs','utf8'),{headers:{'Content-Type':'application/javascript'}});
+ else if(url.pathname==='/__qa/mobile')r=new Response('<!doctype html><html><head><meta charset="utf-8"><title>QA móvil · 360px</title></head><body style="margin:0;background:#27364a"><iframe title="Bot Nuevo 360px" src="/" style="display:block;width:360px;height:840px;border:0;margin:auto"></iframe></body></html>',{headers:{'Content-Type':'text/html'}});
  else if(fixture&&url.pathname==='/api/snapshot')r=Response.json({...await collect(bucket,url.searchParams.get('symbol')||'BTCUSDT',fakeFetch()),dataMode:'SYNTHETIC_TEST_ONLY'});
  else r=await worker.fetch(request,{BUCKET:bucket});
  if(fixture&&url.pathname==='/'){r=new Response((await r.text()).replace('Proyecto personal · Bitget Futures','PRUEBA SINTÉTICA · NO USAR PRECIOS').replace('Conectando con fuentes públicas','PRUEBA SINTÉTICA · conectando fixtures'),{headers:r.headers,status:r.status});}

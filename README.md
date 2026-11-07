@@ -1,35 +1,13 @@
-# Bot Nuevo · radar personal de liquidez
+# Bot Nuevo · Terminal 54
 
-Aplicación web de lectura pública de Bitget USDT Futures, independiente de SNIPER/L65.
+Aplicación activa en `web/`: terminal personal de liquidez con universo canónico de 54 activos, precios WebSocket, gráfico TradingView Lightweight Charts, EMA/RSI/volumen/Fibonacci, descubrimiento/mapa de calor, cuatro radares SPOT/PERP, narrativas, anticipadas, disparos candidatos y protocolo K1–K4.
 
-## Abrir
+[Ver el tablero privado](https://bot-nuevo-liquidez.stablepiece.chatgpt.site/) · [Arquitectura y límites](web/README.md) · [Aceptación](web/docs/ACEPTACION_54.md)
 
-https://bot-nuevo-liquidez.stablepiece.chatgpt.site/
+El scanner Python original de este repositorio se conserva como referencia. No es el servidor del tablero ni el SNIPER L65. El motor web actual tiene código único por responsabilidad y un contrato común; no usa monkey patches ni wrappers por versión.
 
-Sitio privado: entrar con la cuenta ChatGPT propietaria. Incluye radar, fractales F1/F2/F3, cuatro políticas visibles, funding, contexto, SL/TP1/TP2/TP3/R:R, historial y una matriz de veinte controles. No consulta cuentas de exchange ni envía órdenes.
+Datos públicos Bitget y caché por mercado/símbolo/TF. El catálogo decide disponibilidad actual; 54 activos del universo no implica que Bitget tenga 54 pares SPOT y 54 PERP. La primera lectura real observó 51 contratos PERP. No se sustituye un mercado con otro.
 
-## Implementación activa
+GitHub Actions conserva datos públicos en la rama `market-data` con objetivo de cinco minutos, sujeto a demoras de GitHub. El navegador recibe los precios en vivo y dibuja/analiza sin llamar a modelos de IA. No se publican cuentas, claves ni planes privados en esta rama.
 
-La fuente web está en `web/worker/`. El colector consulta Bitget desde el navegador y el servidor recalcula y guarda cada captura en almacenamiento durable. Usa un solo motor versionado; los indicadores no consumen tokens de modelos IA.
-
-Bitget devolvió HTTP 403 desde el nodo de hosting. La API pública permite consultas CORS desde el navegador; se verificó una actualización real y guardado desde Chrome. Los precios de diez activos ahora se reciben por WebSocket mientras la pantalla está abierta. GitHub Actions conserva capturas públicas en la rama market-data con un objetivo de cinco minutos aunque la pantalla esté cerrada; el horario puede demorarse. Los tickers no sustituyen un libro L2 continuo.
-
-Ver [documentación web](web/README.md), [aceptación de veinte puntos](web/docs/ACEPTACION_20.md) y [captura móvil de QA](web/docs/mobile-qa.jpg).
-
-## Validación
-
-37 pruebas de Node aprobadas: `cd web` y `node --test tests/*.test.js`. Incluyen paridad numérica con el núcleo Python anterior, adquisición, caducidad, concurrencia, ingesta, persistencia y riesgo neto. Artefacto ESM validado. Interfaz revisada a 360 px; no certifica hardware Android.
-
-Lectura pública real de BTC verificada: 270 días, 39 semanas y 88 meses en la corrida de cierre. Es cobertura de una observación, no una garantía futura.
-
-## Límites explícitos
-
-- MODERADO: propuesta intermedia inicial, sin calibración estadística. ULTRAAGRESIVO: no admitido sin L2 continuo.
-- Operaciones grandes de la muestra no identifican ballenas. Liquidez global, supply completo e identidades on-chain carecen de una fuente completa conectada.
-- FRED respondió HTTP 520 desde el hosting: su proxy USD queda UNKNOWN. Nunca pasa a cero ni a un contexto favorable.
-- Los planes guardados son manuales, sin fills observados. No hay rentabilidad certificada ni liquidación calculada con una cuenta real.
-- Los plugins del chat no se transfieren automáticamente al servidor. No hay proveedores de inferencia habilitados.
-
-## Python anterior
-
-`bot_nuevo/` conserva el núcleo Python de snapshots y el adaptador CCXT opcional, con sus treinta pruebas locales: `python -m unittest discover -s tests`. Su conexión CCXT/Bitget en vivo no se da por verificada por la prueba REST del motor web.
+No envía órdenes ni certifica rentabilidad. Faltan la portabilidad/validación de las 60 estrategias del programa antiguo, L2 continuo, homónimos por contrato y fuentes globales de flujos/ballenas/supply/noticias. Véase el alcance explícito en la documentación.

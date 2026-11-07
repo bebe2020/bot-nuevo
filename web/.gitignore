@@ -3,3 +3,6 @@ site.tar.gz
 
 .local/
 dist/
+
+node_modules/
+.local-*
