@@ -32,7 +32,11 @@ La calculadora recibe cantidad y comisiones explícitas. Distingue salida total 
 
 Un objeto inmutable por activo/minuto consultado guarda un resumen; `latest/<símbolo>` conserva el último payload completo. El historial no depende de localStorage ni del teléfono. Las preferencias de pantalla no contienen secretos. El lease usa comparación de ETag para evitar doble escritor; solicitudes concurrentes reciben la captura previa sin cambiar su fecha.
 
-La pantalla consulta cada 30 segundos mientras está abierta y puede pausarse. El libro caduca a los 5 segundos: tanto la API como la vista retiran su admisión vigente al vencer. Hay caché de adquisición de 30 s y macro de 1 h. No se presenta como streaming L2, HFT ni captura 24/7 con el navegador cerrado. No hay una tarea periódica conectada en esta entrega.
+La pantalla recibe tickers públicos por WebSocket para los diez perpetuos, repinta cada segundo y muestra el reloj del exchange, mensajes recibidos, cambios reales y reconexión. Si el WS no entrega un precio reciente, consulta REST cada 3 s y lo identifica como REST. Pausa detiene ambos caminos. Al volver al primer plano se revisa y restablece la conexión. El gráfico superpone el último precio; BOS, zonas e indicadores siguen usando velas cerradas.
+
+El análisis completo se captura cada 30 s mientras la pantalla está abierta. El libro de 20 niveles caduca a los 5 s: un ticker L1 nuevo no renueva su edad ni habilita ULTRAAGRESIVO. GitHub Actions ejecuta el colector público con un objetivo de 5 minutos y conserva latest, estado y resumen diario de diez precios en la rama market-data. El detalle multitemporal de esa captura es BTC; otros detalles se adquieren al seleccionar el activo. GitHub puede retrasar ejecuciones; después de 60 días sin actividad en main puede desactivar la programación. El sitio muestra la última captura real y marca atraso desde 15 min. No es L2 continuo ni ejecución de órdenes.
+
+El workflow usa el token efímero de GitHub Actions, con escritura de contenidos, solo para publicar la rama market-data. No recibe credenciales del sitio, cuentas del exchange ni planes privados. El sitio privado lee esos datos públicos, recalcula y preserva sus fechas. El historial combina los registros privados con los precios públicos del día; días anteriores siguen en GitHub. Reintentos fallidos nunca fabrican precios ni actualizan latest.
 
 ## Fuentes parciales
 

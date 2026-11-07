@@ -12,7 +12,7 @@ Sitio privado: entrar con la cuenta ChatGPT propietaria. Incluye radar, fractale
 
 La fuente web está en `web/worker/`. El colector consulta Bitget desde el navegador y el servidor recalcula y guarda cada captura en almacenamiento durable. Usa un solo motor versionado; los indicadores no consumen tokens de modelos IA.
 
-Bitget devolvió HTTP 403 desde el nodo de hosting. La API pública permite consultas CORS desde el navegador; se verificó una actualización real y guardado desde Chrome. No se presenta la captura como un servicio 24/7 con la página cerrada.
+Bitget devolvió HTTP 403 desde el nodo de hosting. La API pública permite consultas CORS desde el navegador; se verificó una actualización real y guardado desde Chrome. Los precios de diez activos ahora se reciben por WebSocket mientras la pantalla está abierta. GitHub Actions conserva capturas públicas en la rama market-data con un objetivo de cinco minutos aunque la pantalla esté cerrada; el horario puede demorarse. Los tickers no sustituyen un libro L2 continuo.
 
 Ver [documentación web](web/README.md), [aceptación de veinte puntos](web/docs/ACEPTACION_20.md) y [captura móvil de QA](web/docs/mobile-qa.jpg).
 
