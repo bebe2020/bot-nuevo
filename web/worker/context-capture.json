@@ -1,0 +1,305 @@
+{
+  "macro": {
+    "value": {
+      "usdBillions": 5790.745,
+      "date": "2026-11-04",
+      "formula": "WALCL/1000 - WTREGEN/1000 - RRPONTSYD",
+      "frequency": "WALCL nivel miércoles; WTREGEN promedio semanal; RRP diario en fecha común",
+      "scope": "PROXY_USD_FED; NO_LIQUIDEZ_GLOBAL",
+      "components": {
+        "WALCL": 6748.145,
+        "WTREGEN": 957.175,
+        "RRPONTSYD": 0.225
+      },
+      "previousDate": "2026-10-28",
+      "changeBillions": 45.01299999999992
+    },
+    "status": "PARTIAL",
+    "reason": "GLOBAL_NO_OBSERVADA",
+    "sources": [
+      {
+        "id": "RRPONTSYD",
+        "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=RRPONTSYD",
+        "observations": 63,
+        "latestDate": "2026-11-06",
+        "latestValue": 0.15,
+        "unit": "miles de millones USD"
+      },
+      {
+        "id": "WALCL",
+        "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=WALCL",
+        "observations": 13,
+        "latestDate": "2026-11-04",
+        "latestValue": 6748145,
+        "unit": "millones USD"
+      },
+      {
+        "id": "WTREGEN",
+        "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=WTREGEN",
+        "observations": 13,
+        "latestDate": "2026-11-04",
+        "latestValue": 957175,
+        "unit": "millones USD"
+      }
+    ],
+    "received": 1794065265263
+  },
+  "calendar": {
+    "status": "OK",
+    "items": [
+      {
+        "id": "118fb226-8ada-402f-9c0f-41b3b5baa2a3",
+        "title": "Real Earnings",
+        "startsAt": 1794317400000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "c26d524f-228b-46e9-b00e-fdbec26d68af",
+        "title": "Consumer Price Index",
+        "startsAt": 1794317400000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "0e068cb5-2188-4bfd-861e-97aac53dadff",
+        "title": "Producer Price Index",
+        "startsAt": 1794576600000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "9668ee2f-1e39-4c4e-9371-d41595d24784",
+        "title": "U.S. Import and Export Price Indexes",
+        "startsAt": 1794922200000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "82c79207-ba3d-46fc-8c9e-5bb52546a89f",
+        "title": "Employer-Reported Workplace Injuries and Illnesses (Annual)",
+        "startsAt": 1795014000000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "bffc7814-5a97-46de-b946-613ca42a5b84",
+        "title": "State Employment and Unemployment (Monthly)",
+        "startsAt": 1795186800000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "1d8ac89d-ed64-4dce-844a-a24951208945",
+        "title": "Job Openings and Labor Turnover Survey",
+        "startsAt": 1796137200000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "055d0eea-5b8c-4a50-92e6-393c7d8f6421",
+        "title": "Metropolitan Area Employment and Unemployment (Monthly)",
+        "startsAt": 1796223600000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "f77d231e-d7cf-4cba-938a-a8964fb5f4a8",
+        "title": "County Employment and Wages",
+        "startsAt": 1796223600000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "06c28939-7346-46f0-872e-afa00ccadc5d",
+        "title": "Employment Situation",
+        "startsAt": 1796391000000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "4b0fd4d8-4d5d-49fe-97e8-74f8215be2ba",
+        "title": "Productivity and Costs",
+        "startsAt": 1796736600000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "a434d240-87cd-4fcc-afb4-2c923808b7c1",
+        "title": "Consumer Price Index",
+        "startsAt": 1796909400000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "926e1d42-260a-4fd6-bea9-2ce1c51d6d2e",
+        "title": "Real Earnings",
+        "startsAt": 1796909400000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "f34477fe-4d0a-4c31-b389-52ffc6506e1a",
+        "title": "Producer Price Index",
+        "startsAt": 1797341400000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "48feadb6-3984-418d-83ea-f8912343cf68",
+        "title": "Census of Fatal Occupational Injuries",
+        "startsAt": 1797433200000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "1d53dc34-67a1-4691-a7bc-9681c9c22c3f",
+        "title": "Employer Costs for Employee Compensation",
+        "startsAt": 1797433200000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "c2f685bf-b4ae-42cd-ab04-6083b5c77ddb",
+        "title": "U.S. Import and Export Price Indexes",
+        "startsAt": 1797514200000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "f2c792a4-6718-49f0-8591-634b81475074",
+        "title": "Work Experience of the Population (Annual)",
+        "startsAt": 1797606000000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "02d0cb9e-3da0-4b67-ae96-4016c6b51a6e",
+        "title": "State Employment and Unemployment (Monthly)",
+        "startsAt": 1797606000000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      },
+      {
+        "id": "d63f7024-24bc-4b32-a2d4-e9e4f09ad49c",
+        "title": "Metropolitan Area Employment and Unemployment (Monthly)",
+        "startsAt": 1798642800000,
+        "source": "BLS",
+        "sourceTimezone": "US-Eastern",
+        "link": "https://www.bls.gov/schedule/"
+      }
+    ],
+    "received": 1794065265263,
+    "source": "https://www.bls.gov/schedule/news_release/bls.ics"
+  },
+  "news": {
+    "status": "OK",
+    "items": [
+      {
+        "title": "Major Economic Indicators Latest Numbers",
+        "link": "https://www.bls.gov/bls/",
+        "published": 1793971895000,
+        "summary": "Consumer Price Index (CPI): +0.6% in Sep 2026 News Release Historical Data Unemployment Rate: 4.1% in Oct 2026 News Release Historical Data Payroll Employment: +165,000(p) in Oct 2026 News Release Historical Data Average Hourly Earnings: +$0.14(p) in Oct 2026 News Release Historical Data",
+        "source": "BLS"
+      },
+      {
+        "title": "Federal Reserve issues FOMC statement",
+        "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm",
+        "published": 1793210400000,
+        "summary": "Federal Reserve issues FOMC statement",
+        "source": "Federal Reserve"
+      },
+      {
+        "title": "Minutes of the Board's discount rate meetings on August 17, September 9, and September 16, 2026",
+        "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261013a.htm",
+        "published": 1791914400000,
+        "summary": "Minutes of the Board's discount rate meetings on August 17, September 9, and September 16, 2026",
+        "source": "Federal Reserve"
+      },
+      {
+        "title": "Minutes of the Federal Open Market Committee, September 15-16, 2026",
+        "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261007a.htm",
+        "published": 1791396000000,
+        "summary": "Minutes of the Federal Open Market Committee, September 15-16, 2026",
+        "source": "Federal Reserve"
+      },
+      {
+        "title": "Federal Reserve issues FOMC statement",
+        "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm",
+        "published": 1789581600000,
+        "summary": "Federal Reserve issues FOMC statement",
+        "source": "Federal Reserve"
+      },
+      {
+        "title": "Federal Reserve Board and Federal Open Market Committee release economic projections from the September 15-16 FOMC meeting",
+        "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916b.htm",
+        "published": 1789581600000,
+        "summary": "Federal Reserve Board and Federal Open Market Committee release economic projections from the September 15-16 FOMC meeting",
+        "source": "Federal Reserve"
+      },
+      {
+        "title": "Minutes of the Board's discount rate meetings on July 20 and July 29, 2026",
+        "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260825a.htm",
+        "published": 1787680800000,
+        "summary": "Minutes of the Board's discount rate meetings on July 20 and July 29, 2026",
+        "source": "Federal Reserve"
+      },
+      {
+        "title": "Minutes of the Federal Open Market Committee, July 28–29, 2026",
+        "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260819a.htm",
+        "published": 1787162400000,
+        "summary": "Minutes of the Federal Open Market Committee, July 28–29, 2026",
+        "source": "Federal Reserve"
+      }
+    ],
+    "received": 1794065265263,
+    "sources": [
+      {
+        "status": "OK",
+        "received": 1794065265263,
+        "source": "https://www.federalreserve.gov/feeds/press_monetary.xml"
+      },
+      {
+        "status": "OK",
+        "received": 1794065265263,
+        "source": "https://www.bls.gov/feed/bls_latest.rss"
+      }
+    ]
+  },
+  "releases": {
+    "status": "OK",
+    "items": [
+      {
+        "title": "Major Economic Indicators Latest Numbers",
+        "link": "https://www.bls.gov/bls/",
+        "published": 1793971895000,
+        "summary": "Consumer Price Index (CPI):\t\t\t\t\t\t\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t+0.6%  in Sep 2026\t\t\t\t\t\t\t\t\t\t\t\t\tNews Release\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tHistorical Data\r\n\t\t\t\t\t\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tUnemployment Rate:\t\t\t\t\t\t\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t4.1%  in Oct 2026\t\t\t\t\t\t\t\t\t\t\t\t\tNews Release\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tHistorical Data\r\n\t\t\t\t\t\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tPayroll Employment:\t\t\t\t\t\t\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t+165,000(p)  in Oct 2026\t\t\t\t\t\t\t\t\t\t\t\t\tNews Release\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tHistorical Data\r\n\t\t\t\t\t\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tAverage Hourly Earnings:\t\t\t\t\t\t\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t+$0.14(p)  in Oct 2026\t\t\t\t\t\t\t\t\t\t\t\t\tNews Release\t\t\r\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tHistorical Data\r\n\t\t\t\t\t\t\t\r\n",
+        "source": "BLS"
+      }
+    ],
+    "received": 1794065265263,
+    "source": "https://www.bls.gov/feed/bls_latest.rss"
+  },
+  "checkedAt": 1794065265263,
+  "errors": [],
+  "nextCheck": 1794068865263
+}
