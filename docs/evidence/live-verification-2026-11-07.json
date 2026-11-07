@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-07",
+  "siteSourceCommit": "15ccdb50a83bdebf620825c5308a6c905784f66c",
+  "tests": 51,
+  "browser": {
+    "actualWsMessages": 4835,
+    "actualPriceChanges": 37,
+    "pauseCounterStableSeconds": 17,
+    "resumed": true,
+    "mobileWidth": 345,
+    "mobileScrollWidth": 345
+  },
+  "production": {
+    "health": 200,
+    "liveVersion": "live-1.0",
+    "cloudState": "OK",
+    "collector": "GITHUB_ACTIONS_PUBLICO",
+    "cloudReceived": 1794036813956,
+    "cloudSourceAsOf": 1794036813691,
+    "historyCount": 45,
+    "githubHistoryRows": 29,
+    "liveModuleSha256": "2d9e007c91c07907dfe04c3d4c105a938a816044647a07973eae4c79736e570a"
+  },
+  "githubRuns": [
+    42350808602,
+    42351467004,
+    42351772052
+  ],
+  "scheduledTargetMinutes": 5,
+  "limits": [
+    "La programación de GitHub puede demorarse",
+    "Ticks WS mientras la página está abierta; captura periódica en segundo plano",
+    "El detalle del colector cloud es BTC; precios y radar de diez activos",
+    "L2 continuo y órdenes reales no implementados"
+  ],
+  "previewOnlyLimitation": "El proceso de preview no obtuvo el feed GitHub; la lectura del sitio publicado sí se verificó con estado OK y persistencia real."
+}
