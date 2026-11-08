@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+const root=new URL('../',import.meta.url);
+const read=p=>readFile(new URL(p,root),'utf8');
+test('tablero conecta Radar Explosión SPOT y Diario PAPER',async()=>{const [ui,app,build]=await Promise.all([read('worker/ui.js'),read('worker/app.js'),read('scripts/build.mjs')]);for(const id of ['explosionStatus','explosionReadout','paperForm','paperRows','paperSummary','paperExport'])assert.match(ui,new RegExp('id="'+id+'"'));assert.match(ui,/data-view="explosion"/);assert.match(app,/import \{spotExplosion,createPaperTrade,closePaperTrade,paperSummary\} from '\/explosion-paper.js'/);assert.match(app,/function renderExplosion\(/);assert.match(app,/function renderPaper\(/);assert.match(app,/SPOT sin apalancamiento/);assert.match(build,/'explosion-paper.js'/);});
+test('operaciones paper nunca se envían al endpoint de órdenes',async()=>{const app=await read('worker/app.js');assert.match(app,/localStorage\.setItem\(PAPER_KEY/);assert.doesNotMatch(app,/fetch\(['"]https?:\/\/[^'"]*order/i);assert.match(app,/PAPER_NO_REAL/);});
