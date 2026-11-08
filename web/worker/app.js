@@ -71,8 +71,8 @@ function renderPaper(){
 $('paperMarket').onchange=()=>{if($('paperMarket').value==='SPOT')$('paperSide').value='LONG';};
 $('paperForm').onsubmit=e=>{e.preventDefault();try{
  const q=currentQ(),now=Date.now(),market=$('paperMarket').value,price=Number($('paperEntry').value);
- if(market!==$('market').value||!freshQ(q)||!q||Math.abs(price/q.price-1)>0.01)throw Error('Mercado o cotización no verificable: seleccioná mercado coincidente y precio actual.');
- const side=$('paperSide').value;if(market==='SPOT'&&side!=='LONG')throw Error('SPOT solo LONG');
+ if(market!==$('market').value||!freshQ(q)||!q||!Number.isFinite(price)||price<=0||Math.abs(price/q.price-1)>0.01)throw Error('Mercado o cotización no verificable: seleccioná mercado coincidente y precio actual.');
+ const side=$('paperSide').value;if(market==='SPOT'&&side!=='LONG')throw Error('SPOT solo LONG');if(market==='SPOT'&&Number($('paperLev').value)!==1)throw Error('SPOT sin apalancamiento: elegí x1');
  const t=createPaperTrade({id:'paper-'+now+'-'+paper.length,symbol:$('symbol').value,market,side,entry:price,stop:Number($('paperStop').value),targets:['paperTP1','paperTP2','paperTP3'].map(id=>Number($(id).value)),qty:Number($('paperQty').value),leverage:Number($('paperLev').value),entryAsOf:now,sourceAsOf:q.ts,fillEvidence:'ENTRADA_MANUAL_SIMULADA_COTIZACION_PUBLICA_NO_FILL'});
  paper.push(t);savePaper();$('paperError').textContent='Entrada PAPER registrada en este navegador; no hubo orden ni fill real.';renderPaper();
  }catch(err){$('paperError').textContent=err.message;}};
