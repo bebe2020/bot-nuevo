@@ -105,7 +105,7 @@ test('interfaz incluye nuevas modalidades sin quitar Kronos ni paneles antiguos'
  const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
  const [ui,panels,build]=await Promise.all([read('worker/ui.js'),read('worker/panels.js'),read('scripts/build.mjs')]);
  for(const id of ['spotRadarRows','spotTrancheForm','spotPlanEntry1','spotPlanEntry2','spotPlanEntry3','spotPlanStop','perpRiskCalc'])assert.ok(ui.includes('id="'+id+'"'));
- assert.ok(ui.includes('data-view="operativa"'));assert.ok(ui.includes('data-panel="lab"'));assert.ok(ui.includes('data-panel="defi"'));assert.ok(ui.includes('id="perpArmPaper"'));
+ assert.ok(ui.includes('data-view="operativa"'));assert.ok(ui.includes('data-panel="lab"'));assert.ok(ui.includes('data-panel="defi"'));assert.ok(ui.includes('id="perpArmPaper"'));assert.ok(ui.includes('id="exportPaperLog"'));assert.match(panels,/exportPaperLog\(\)/);
  assert.match(panels,/armStagedSpot/);assert.match(panels,/spotExplosionRadar/);
  assert.match(build,/'trading-lanes.js'/);assert.match(build,/'spot-explosion.js'/);assert.match(build,/'panels.js'/);
 });
