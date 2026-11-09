@@ -43,7 +43,7 @@ export function spotStagePlan({symbol,market='SPOT',budgetUsd,entryPrices,stop,f
 export function perpRiskPlan({lane,side,horizon,leverage,entry,stop,equityUsd=710,riskFraction,feeRate=.0006,slippageRate=.001,maintenanceTierVerified=false,quoteFresh=false}={}){
  const contract=validateLane({lane,market:'PERP',side,horizon,leverage});
  if(contract.status==='BLOCKED')return contract;
- const cap=lane==='PERP_INTRADIA'?.005:.01;
+ const cap=lane==='PERP_INTRADIA' ? 0.005 : 0.01;
  if(!finite(riskFraction)||riskFraction<=0||riskFraction>cap)return {status:'BLOCKED',reason:'RIESGO_SOBREPASA_TOPE_DE_LABORATORIO',maxRiskFraction:cap};
  if(!finite(entry)||!finite(stop)||entry<=0||stop<=0||side==='LONG'&&stop>=entry||side==='SHORT'&&stop<=entry||!finite(equityUsd)||equityUsd<=0||!finite(feeRate)||feeRate<0||!finite(slippageRate)||slippageRate<0)return {status:'BLOCKED',reason:'GEOMETRIA_O_COSTES_INVALIDOS'};
  if(!quoteFresh)return {status:'BLOCKED',reason:'COTIZACION_NO_FRESCA'};
@@ -58,4 +58,45 @@ export function perpRiskPlan({lane,side,horizon,leverage,entry,stop,equityUsd=71
 export function portfolioGoal({capitalUsd=710,profitGoalUsd=3500}={}){
  if(!finite(capitalUsd)||capitalUsd<=0||!finite(profitGoalUsd)||profitGoalUsd<0)return {status:'BLOCKED'};
  return {initialUsd:capitalUsd,profitGoalUsd,totalNeededUsd:capitalUsd+profitGoalUsd,requiredNetReturnPct:profitGoalUsd/capitalUsd*100,guaranteed:false};
+}
+
+export function advanceSpotPaper(paper,quote,now=Date.now()){
+ if(paper?.mode!=='SPOT_EXPLOSIVO')throw Error('NO_ES_SPOT_ESCALONADO');
+ if(paper.state==='SIM_CERRADA'||paper.state==='SIM_CANCELADA')return paper;
+ if(!quote||quote.market!=='SPOT'||quote.symbol!==paper.symbol||!['WS','REST'].includes(quote.source)||!finite(quote.price)||quote.price<=0||!finite(quote.ts)||!finite(quote.received)||quote.ts< paper.armedAt||quote.ts<= (paper.lastAsOf||0)||quote.ts>now+5000||now-quote.ts>5000||now-quote.received>5000)return paper;
+ const p=structuredClone(paper);
+ const event=(type,extra={})=>p.events.push({type,at:quote.ts,source:quote.source,evidence:'COTIZACION_PUBLICA_NO_FILL_REAL',...extra});
+ const sell=(qty,rawPrice,label)=>{
+  const price=rawPrice*(1-p.slippageRate);
+  const entryBasis=p.avgEntry*qty,fees=qty*(p.avgEntry+price)*p.feeRate;
+  const net=qty*price-entryBasis-fees;
+  p.net+=net;p.remaining=Math.max(0,p.remaining-qty);p.exitFeesUsd+=qty*price*p.feeRate;
+  event(label,{price,quantity:qty,netUsd:net});
+ };
+ if(quote.price<=p.stop){
+  if(p.remaining>0){sell(p.remaining,quote.price,'STOP_SPOT_PAPER_PRECIO_OBSERVADO');p.state='SIM_CERRADA';}
+  else {p.state='SIM_CANCELADA';event('STOP_ANTES_DE_COMPRAS_PAPER',{price:quote.price});}
+  p.lastAsOf=quote.ts;return p;
+ }
+ if(!p.exitStarted)for(const stage of p.stages){
+  if(stage.filled||quote.price>stage.limitPrice)continue;
+  const price=stage.limitPrice*(1+p.slippageRate),qty=stage.allocationUsd/(price*(1+p.feeRate)),fees=qty*price*p.feeRate;
+  stage.filled=true;stage.filledAt=quote.ts;stage.fillPrice=price;stage.quantity=qty;
+  p.quantity+=qty;p.remaining+=qty;p.entryNotionalUsd+=qty*price;p.entryFeesUsd+=fees;p.avgEntry=p.entryNotionalUsd/p.quantity;p.state='SIM_ABIERTA';
+  event('COMPRA_TRAMO_PAPER',{stage:stage.index,limitPrice:stage.limitPrice,fillPrice:price,quantity:qty,feeUsd:fees});
+ }
+ if(p.remaining>0){
+  for(let i=p.targetIndex;i<p.exitGains.length;i++){
+   const target=p.avgEntry*(1+p.exitGains[i]);
+   if(quote.price<target)break;
+   if(!p.exitStarted){p.exitStarted=true;p.exitBaselineQty=p.remaining;}
+   const qty=i===p.exitGains.length-1?p.remaining:Math.min(p.remaining,p.exitBaselineQty*p.exitWeights[i]);
+   if(qty<=0)break;
+   sell(qty,target,'VENTA_TRAMO_TP'+(i+1)+'_PAPER');p.targetIndex=i+1;
+   if(p.remaining<=1e-12){p.remaining=0;p.state='SIM_CERRADA';break;}
+  }
+  p.unrealized=p.remaining*(quote.price-p.avgEntry)-p.remaining*quote.price*p.feeRate;
+ }
+ p.lastAsOf=quote.ts;
+ return p;
 }
