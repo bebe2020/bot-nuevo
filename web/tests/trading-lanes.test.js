@@ -104,7 +104,7 @@ test('PERP no inventa liquidacion y bloquea geometria potencialmente peligrosa',
 
 test('caza PERP LONG/SHORT x3/x5/x7/x10 con límites por capitalización y liquidez',()=>{
  for(const side of ['LONG','SHORT'])for(const lev of [3,5,7,10]){
-  const risk=perpRiskPlan({lane:'PERP_CAZA',horizon:'15m',side,leverage:lev,entry:100,stop:side==='LONG'?99.5:100.5,equityUsd:710,riskFraction:0.005,quoteFresh:true,marketCapUsd:15e9,volume24hUsd:35e6});
+  const risk=perpRiskPlan({lane:'PERP_CAZA',horizon:'15m',side,leverage:lev,entry:100,stop:side==='LONG'?98:102,equityUsd:710,riskFraction:0.005,quoteFresh:true,marketCapUsd:15e9,volume24hUsd:35e6});
   assert.equal(risk.status,'PAPER_ONLY',JSON.stringify(risk));
   const book=new PaperBook(storage());
   const paper=book.armPerpLab(risk,{symbol:'BTCUSDT',sourceAsOf:NOW-1000},NOW);
