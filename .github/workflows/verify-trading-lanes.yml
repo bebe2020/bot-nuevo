@@ -1,0 +1,31 @@
+name: Verify segregated SPOT and PERP
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/verify-trading-lanes.yml'
+  push:
+    branches:
+      - 'feature/operativa-separada-20261109'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: node --check worker/trading-lanes.js
+      - run: node --check worker/spot-explosion.js
+      - run: node --check worker/paper.js
+      - run: node --check worker/panels.js
+      - run: npm run build
+      - run: npm run validate

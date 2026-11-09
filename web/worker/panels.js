@@ -4,6 +4,9 @@ import {INDICATOR_CATALOG} from '/technicals.js';
 import {unifiedRow,returnTone,quoteMetric} from '/market-contract.js';
 import {automaticSizing,watchObservation} from '/auto-protocol.js';
 import {WireScene,forecastSVG,correlationGraph} from '/lab.js';
+import {TRADING_LANES,spotStagePlan,perpRiskPlan,portfolioGoal} from '/trading-lanes.js';
+import {spotExplosionRadar} from '/spot-explosion.js';
+import {liquidityHuntRadar} from '/liquidity-hunt.js';
 const dp=id=>document.getElementById(id),de=x=>String(x??'N/D').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),df=(x,d=7)=>n(x)===null?'N/D':new Intl.NumberFormat('es-AR',{maximumSignificantDigits:d}).format(Number(x)),dt=x=>n(x)===null?'N/D':new Date(Number(x)).toLocaleString('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hour12:false}),dc=x=>n(x)===null?'N/D':(x>0?'+':'')+df(x*100,4)+' %',dr=(a,b,cls='')=>'<div class="row"><span>'+de(a)+'</span><span class="'+cls+'">'+de(b)+'</span></div>';
 export class DashboardPanels{
  constructor(options){Object.assign(this,options);this.providers=null;this.cross=null;this.chain=null;this.forecast=null;this.lab='robot';this.lastGlobal=0;this.lastCross=0;this.providerBusy=false;this.currentIdeas=new Map();this.correlations=[];
@@ -17,6 +20,11 @@ export class DashboardPanels{
   for(const [id,key]of [['autoRiskUSD','riskUSD'],['autoFeePct','feePct'],['autoLeverage','leverage']]){dp(id).value=budget[key]??'';dp(id).onchange=()=>{try{localStorage.setItem('terminal54-sizing',JSON.stringify(this.budget()));}catch{}this.renderAutomatic();};}
   dp('autoProtocolTable').addEventListener('click',e=>this.action(e));dp('automaticIntent').addEventListener('click',e=>this.action(e));dp('watchList').addEventListener('click',e=>this.action(e));
   for(const id of ['onchainTable','assetRanking','hyperTable'])dp(id).addEventListener('click',e=>this.action(e));
+  dp('spotTrancheForm').onsubmit=e=>{e.preventDefault();this.armSpotTranches();};
+  dp('perpRiskCalc').onclick=()=>this.calculatePerpLab();
+  dp('perpArmPaper').onclick=()=>this.calculatePerpLab({arm:true});
+  dp('exportPaperLog').onclick=()=>this.exportPaperLog();
+  dp('perpLane').onchange=()=>{const swing=dp('perpLane').value==='PERP_SWING';const hunt=dp('perpLane').value==='PERP_CAZA';dp('perpHorizon').value=swing?'SEMANAL':hunt?'15m':'MICRO_PIVOTE';dp('perpLeverage').value=swing?'3':hunt?'5':'20';dp('perpRiskFraction').value=swing?'0.01':hunt?'0.0075':'0.005';};
   this.renderAgents();
  }
  budget(){return {riskUSD:n(dp('autoRiskUSD').value),feePct:n(dp('autoFeePct').value),leverage:n(dp('autoLeverage').value)};}
@@ -28,7 +36,7 @@ export class DashboardPanels{
   if(b.dataset.simIdea){const idea=this.currentIdeas.get(b.dataset.simIdea);if(!idea)return;try{const raw=this.getRaw(),inst=(raw?.market===idea.market?raw?.contracts:raw?.otherMarket?.contracts)?.data?.find(x=>x.symbol===idea.symbol)||{},size=automaticSizing(idea,this.budget(),inst);this.paper.arm(idea,size,this.budget().feePct);dp('sizingStatus').textContent='Seguimiento simulado iniciado · no hay órdenes reales';this.renderPaper();}catch(e){dp('sizingStatus').textContent=e.message;}}
  }
  setLab(name){this.lab=name;document.querySelectorAll('[data-lab-panel]').forEach(p=>p.hidden=p.dataset.labPanel!==name);document.querySelectorAll('[data-lab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.lab===name)));Object.entries(this.scenes).forEach(([id,scene])=>scene.setActive(id===name));if(name==='kronos')this.readKronos();this.renderLab();}
- onView(view){Object.entries(this.scenes).forEach(([id,scene])=>scene.setActive(view==='lab'&&id===this.lab));if(['defi','onchain','hyper','rotation','lab'].includes(view))this.refresh();if(view==='rotation')this.refreshCross();if(view==='anticipadas')this.readWatchHistory();if(view==='onchain')this.readOnchain();if(view==='lab')this.readKronos();this.render();}
+ onView(view){Object.entries(this.scenes).forEach(([id,scene])=>scene.setActive(view==='lab'&&id===this.lab));if(['defi','onchain','hyper','rotation','lab','operativa'].includes(view))this.refresh();if(view==='rotation')this.refreshCross();if(view==='anticipadas')this.readWatchHistory();if(view==='onchain')this.readOnchain();if(view==='lab')this.readKronos();this.render();if(view==='operativa')this.renderTrading();}
  async refresh(){if(this.providerBusy||Date.now()-this.lastGlobal<300000)return;this.providerBusy=true;try{this.providers=await this.tasks.run('defi','DeFi / identidades / Hyperliquid',()=>this.api('/api/providers'),'HTTP_PUBLICO');this.lastGlobal=Date.now();this.renderDeFi();this.renderHyper();this.renderChainTable();this.renderRotation();this.renderLab();}catch(e){dp('defiTime').textContent=e.message;}finally{this.providerBusy=false;}}
  async refreshCross(){if(this.crossBusy||Date.now()-this.lastCross<900000)return;this.crossBusy=true;try{this.cross=await this.tasks.run('macro','Oro / bonos / dólar / liquidez',()=>this.api('/api/cross-assets'),'HTTP_PUBLICO');this.lastCross=Date.now();this.renderRotation();}catch(e){dp('crossAssets').textContent=e.message;}finally{this.crossBusy=false;}}
  async readOnchain(symbol=this.getSymbol()){
@@ -39,12 +47,12 @@ export class DashboardPanels{
  async readKronos(){const symbol=this.getSymbol(),market=this.getMarket(),key=symbol+':'+market;if(this.forecastBusy===key)return;if(this.forecast?.symbol===symbol&&this.forecast.market===market&&Date.now()-(this.forecastReadAt||0)<300000)return;this.forecastBusy=key;
   try{const result=await this.tasks.run('kronos','Consultar inferencia Kronos-mini',()=>this.api('/api/kronos?symbol='+symbol+'&market='+market),'KRONOS_MINI_PYTORCH');if(symbol!==this.getSymbol()||market!==this.getMarket())return;this.forecast=result;this.forecastReadAt=Date.now();this.renderKronos();this.renderLab();}catch(e){dp('kronosFacts').textContent=e.message;}finally{this.forecastBusy=null;}
  }
- render(){this.renderAutomatic();this.renderWatch();this.renderAccumulation();this.renderPaper();const view=this.getView();if(view==='defi')this.renderDeFi();if(view==='hyper')this.renderHyper();if(view==='onchain'){this.renderChainTable();this.renderOnchain();}if(view==='rotation')this.renderRotation();if(view==='lab')this.renderLab();}
+ render(){this.renderAutomatic();this.renderWatch();this.renderAccumulation();this.renderPaper();const view=this.getView();if(view==='defi')this.renderDeFi();if(view==='hyper')this.renderHyper();if(view==='onchain'){this.renderChainTable();this.renderOnchain();}if(view==='rotation')this.renderRotation();if(view==='lab')this.renderLab();if(view==='operativa')this.renderTrading();}
  ideaFor(row){const s=this.getSnapshot(),horizon=this.getHorizon(),profile=this.getProfile(),tf=PROTOCOLS[horizon].frames[0],maxAge=(FRAMES[tf]||86400000)*4,now=Date.now();
   const candidates=(s?.opportunities||[]).filter(x=>x.symbol===row.symbol&&x.market===row.market&&x.horizon===horizon&&now-x.formed<=maxAge);
   return candidates.map(x=>{let e=x.evaluations?.[profile];const q=this.getQuote(x.symbol,x.market);if(s.symbol===x.symbol&&s.market===x.market)e=evaluateIdea({...s,currentPrice:q&&now-q.ts<5000?q.price:null},x,profile,now);if((!q||now-q.ts>=5000||now-q.received>=5000)&&e?.admission==='CONFIRMADA')e={...e,admission:'ESPERA_PRECIO_FRESCO'};if(q&&now-q.ts<5000&&(x.side==='LONG'?q.price<=x.stop:q.price>=x.stop))e={...e,admission:'INVALIDADA',phase:'INVALIDADA'};if(this.isInvalidated?.(x))e={...e,phase:'INVALIDADA',admission:'INVALIDADA'};return {...x,e};}).filter(x=>x.e&&!['INVALIDADA','CADUCADA'].includes(x.e.phase)).sort((a,b)=>(b.e.admission==='CONFIRMADA')-(a.e.admission==='CONFIRMADA'))[0]||null;
  }
- readingText(reading){if(!reading)return 'Pendiente';return ['est','mom','flu','oce'].map(k=>k+' '+(reading.components[k].value===null?'N/D':reading.components[k].value>0?'+'+reading.components[k].value:reading.components[k].value)).join(' · ');}
+ readingText(reading){if(!reading)return 'Pendiente';return ['est','mom','flu','oce'].map(k=>(k==='oce'?'rot':k)+' '+(reading.components[k].value===null?'N/D':reading.components[k].value>0?'+'+reading.components[k].value:reading.components[k].value)).join(' · ');}
  renderAutomatic(){const s=this.getSnapshot();if(!s)return;const rows=this.rows(),horizon=this.getHorizon(),p=PROTOCOLS[horizon],profile=this.getProfile();this.currentIdeas.clear();
   dp('autoProtocolCoverage').textContent=rows.filter(x=>x.price>0).length+' / 54 con precio · '+p.label;
   dp('autoProtocolTable').innerHTML=rows.map(r=>{const reading=r.readings?.[horizon],idea=this.ideaFor(r),base=r.symbol.replace('USDT','');if(idea)this.currentIdeas.set(idea.id,idea);
@@ -101,5 +109,58 @@ export class DashboardPanels{
   dp('systemFacts').innerHTML=dr('Escaneo',s?.coverageProgress?s.coverageProgress.done+' / 54':'Iniciando')+dr('Oportunidades de reglas',s?.opportunities?.length??0)+dr('Horizonte',PROTOCOLS[this.getHorizon()].label)+dr('Perfil',this.getProfile())+dr('Cuenta','NO VERIFICADA · sin conexión de órdenes');
   this.renderAgents();this.renderPaper();
  }
- renderPaper(){let rows=[];try{rows=this.paper.read();}catch{}const html=rows.length?rows.map(x=>'<div class="paper-position"><strong>'+de(x.symbol+' · '+x.market+' · '+x.side)+'</strong><span>'+de(x.state)+'</span>'+dr('Cantidad hipotética / restante',df(x.quantity)+' / '+df(x.remaining))+dr('Neto de salidas simuladas',df(x.net)+' USDT')+dr('No realizado hipotético',df(x.unrealized)+' USDT')+'<small>Simulación por ticks con comisiones declaradas; sin ejecución de cuenta.</small></div>').join(''):'<p class="quiet">Sin seguimientos simulados. Se inician desde una ficha automática con riesgo y costes configurados.</p>';dp('paperRows').innerHTML=html;dp('systemPositions').innerHTML=html;}
+ renderTrading(){
+  const info=portfolioGoal(),titles={SPOT_EXPLOSIVO:'SPOT Explosivo',SPOT_SWING:'SPOT Swing',PERP_INTRADIA:'PERP Scalp / Diario',PERP_CAZA:'PERP Caza de Liquidez',PERP_SWING:'PERP Swing'};
+  dp('tradingLaneCards').innerHTML=Object.entries(TRADING_LANES).map(([id,c])=>'<article class="panel"><h3>'+titles[id]+'</h3>'+dr('Mercado',c.market)+dr('Direcciones',c.sides.join(' / '))+dr('Apalancamiento',c.leverage.map(x=>'x'+x).join(' / '))+dr('Horizontes',c.horizons.join(' · '))+'<p class="quiet">'+de(c.description)+'</p></article>').join('');
+  const hunt=liquidityHuntRadar(this.getRaw(),{market:this.getMarket(),providerAssets:this.providers?.defi?.assets||[],getQuote:this.getQuote,now:Date.now()});
+  dp('huntRadarStatus').textContent=hunt.status==='BLOCKED'?'Todavía no hay datos de este mercado.':hunt.coverage+' / 54 en '+hunt.market+' · '+hunt.candidates+' barridos/rupturas con RVOL observado · '+hunt.unknown+' sin velas válidas · CERO ÓRDENES';
+  dp('huntRadarRows').innerHTML=hunt.items?.length?hunt.items.map(x=>'<tr><td><button data-auto-asset="'+de(x.symbol)+'" data-auto-market="'+de(x.market)+'">'+de(x.symbol.replace('USDT',''))+'</button><small>'+de(x.capTier||'CAP N/D')+' · '+de(x.market)+'</small></td><td>'+de(x.event.replaceAll('_',' '))+'<small>'+de(x.side||'SIN DIRECCIÓN')+' · '+de(x.status)+'</small></td><td>'+df(x.priceAtClose)+'<small>RVOL '+df(x.rvol,3)+' · cierre '+dt(x.asof)+'</small><small>'+de(x.htf||'N/D')+'</small></td><td>'+df(x.entryReference)+'<small>Stop de referencia '+df(x.stopReference)+'</small></td><td>'+df(x.oppositeObservedLiquidity)+'<small>R:R previo a costes '+df(x.rrGrossBeforeCosts,2)+'</small><small>'+de((x.reasons||[x.reason]).slice(0,3).join(' · '))+'</small></td></tr>').join(''):'<tr><td colspan="5">Sin velas propias del mercado seleccionado; no se generan entradas.</td></tr>';
+  dp('huntRadarRows').querySelectorAll('button[data-auto-asset]').forEach(b=>b.onclick=()=>{this.selectAsset(b.dataset.autoAsset,b.dataset.autoMarket);this.openView('operativa');});
+  const raw=this.getRaw(),radar=spotExplosionRadar(raw,{providerAssets:this.providers?.defi?.assets||[],getQuote:this.getQuote,now:Date.now()});
+  dp('spotRadarStatus').textContent=radar.status==='BLOCKED'?'Radar no ejecutado: seleccioná SPOT arriba.':radar.coverage+' de 54 activos evaluados · '+radar.observed+' con velas 1H suficientes · SOLO OBSERVACION, no son señales ni compras.';
+  dp('spotRadarRows').innerHTML=(radar.items||[]).map(x=>'<tr><td><button data-auto-asset="'+de(x.symbol)+'" data-auto-market="SPOT">'+de(x.symbol.replace('USDT',''))+'</button><small>'+de(x.capTier||'CAP N/D')+' · '+de(x.marketCapUsd===null?'capitalización N/D':df(x.marketCapUsd)+' USD')+'</small></td><td>'+[1,4,14].map(h=>x.window?df(x.window[h].returnPct,4)+'%':'N/D').join(' / ')+'</td><td>'+[24,36].map(h=>x.window?df(x.window[h].returnPct,4)+'%':'N/D').join(' / ')+'</td><td>'+df(x.rvol,4)+'<small>'+de(x.reason)+'</small></td></tr>').join('');
+  dp('spotRadarRows').querySelectorAll('button[data-auto-asset]').forEach(b=>b.onclick=()=>{this.selectAsset(b.dataset.autoAsset,'SPOT');this.openView('operativa');});
+  dp('spotPlanReadout').innerHTML=dr('Capital base supuesto',info.initialUsd+' USDT')+dr('Objetivo neto hipotético',info.profitGoalUsd+' USDT · requiere '+df(info.requiredNetReturnPct,4)+'% de retorno neto')+dr('Operaciones reales','0; sin clave de ejecución');
+ }
+ armSpotTranches(){
+  try{
+   if(this.getMarket()!=='SPOT')throw Error('Elegí mercado SPOT en el selector superior');
+   const symbol=this.getSymbol(),q=this.getQuote(symbol,'SPOT'),now=Date.now();
+   if(!q||q.market!=='SPOT'||!['WS','REST'].includes(q.source)||now-q.ts>5000||now-q.received>5000||q.ts>now+5000)throw Error('Falta una cotización SPOT pública fresca (<5 segundos)');
+   const budgetUsd=Number(dp('spotPlanBudget').value);
+   if(!(budgetUsd>0&&budgetUsd<=710))throw Error('Presupuesto simulado entre 0 y 710 USDT');
+   const entryPrices=[1,2,3].map(i=>Number(dp('spotPlanEntry'+i).value)),stop=Number(dp('spotPlanStop').value);
+   const plan=spotStagePlan({symbol,budgetUsd,entryPrices,stop,sourceAsOf:q.ts,now});
+   if(plan.status!=='PAPER_ELIGIBLE')throw Error(plan.reason);
+   const position=this.paper.armStagedSpot(plan,now);
+   dp('spotPlanStatus').textContent='PAPER preparado: '+position.symbol+' · 3 compras / 4 ventas · requiere ticks posteriores · no se envió ninguna orden';
+   this.renderPaper();
+  }catch(e){dp('spotPlanStatus').textContent='NO SE INICIÓ: '+e.message;}
+ }
+ calculatePerpLab({arm=false}={}){
+  const symbol=this.getSymbol(),now=Date.now(),q=this.getQuote(symbol,'PERP');
+  const fresh=q&&q.market==='PERP'&&now-q.ts<=5000&&now-q.received<=5000&&q.ts<=now+5000;
+  const meta=this.providers?.defi?.assets?.find(x=>x.symbol===symbol),validCap=meta&&Number.isFinite(meta.marketAsOf)&&now-meta.marketAsOf<86400000&&meta.marketAsOf<=now;
+  const r=perpRiskPlan({lane:dp('perpLane').value,side:dp('perpDirection').value,horizon:dp('perpHorizon').value,leverage:Number(dp('perpLeverage').value),entry:Number(dp('perpPlanEntry').value),stop:Number(dp('perpPlanStop').value),equityUsd:710,riskFraction:Number(dp('perpRiskFraction').value),marketCapUsd:validCap?meta.marketCap:null,volume24hUsd:fresh?q.volume:null,quoteFresh:!!fresh});
+  dp('perpRiskStatus').innerHTML=r.status==='PAPER_ONLY'?dr('Dirección / horizonte',r.side+' · '+r.horizon)+dr('Exposición teórica',df(r.notionalUsd)+' USDT')+dr('Margen inicial estimado',df(r.marginUsd)+' USDT')+dr('Pérdida prevista hasta stop, incluidos costes supuestos',df(r.riskUsd)+' USDT')+dr('Liquidación','NO CALCULADA · falta mark price y tier de mantenimiento')+'<p class="quiet">Solo laboratorio. No se generó orden.</p>':'<p class="warn">Bloqueado: '+de(r.reason||r.status)+'</p>';
+  if(arm){
+   try{
+    if(this.getMarket()!=='PERP'||r.status!=='PAPER_ONLY')throw Error(r.reason||'El mercado elegido debe ser PERP y el cálculo debe ser válido');
+    const opened=this.paper.armPerpLab(r,{symbol,sourceAsOf:q.ts},now);
+    dp('perpRiskStatus').innerHTML+='<p>Posición PAPER condicional '+de(opened.symbol+' · '+opened.side+' x'+opened.leverage)+' · estado '+de(opened.state)+' · NO ES ORDEN REAL.</p>';
+    this.renderPaper();
+   }catch(e){dp('perpRiskStatus').innerHTML+='<p class="warn">No se abrió PAPER: '+de(e.message)+'</p>';}
+  }
+ }
+ exportPaperLog(){
+  try{
+   const trades=this.paper.read(),asof=Date.now();
+   const file={kind:'PAPER_NO_REAL',source:'LOCAL_STORAGE_EN_ESTE_NAVEGADOR',asof,capitalRealUsd:0,fundingPerp:'NO_VERIFICADO',trades};
+   const blob=new Blob([JSON.stringify(file,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download='bot-nuevo-paper-'+new Date(asof).toISOString().slice(0,10)+'.json';a.click();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+   dp('paperExportStatus').textContent=trades.length+' registros PAPER exportados del navegador. No implica operaciones reales ni copia en servidor.';
+  }catch(e){dp('paperExportStatus').textContent='No se pudo exportar: '+e.message;}
+ }
+ renderPaper(){let rows=[];try{rows=this.paper.read();}catch{}const html=rows.length?rows.map(x=>'<div class="paper-position"><strong>'+de(x.symbol+' · '+x.market+' · '+x.side+(x.leverage?' x'+x.leverage:''))+'</strong><span>'+de(x.state)+'</span>'+(x.mode==='SPOT_EXPLOSIVO'?dr('Compras por tramos',x.stages.map(st=>'T'+st.index+': '+(st.filled?'PAPER':st.canceled?'CANCELADA':'PENDIENTE')).join(' / '))+dr('Ventas parciales ejecutadas en PAPER',x.targetIndex+' / 4'):'')+dr('Cantidad hipotética / restante',df(x.quantity)+' / '+df(x.remaining))+dr(x.market==='PERP'?'Resultado PAPER sin funding':'Resultado PAPER con costes supuestos',df(x.net)+' USDT')+dr('No realizado hipotético',df(x.unrealized)+' USDT')+'<small>Simulación por ticks con comisiones declaradas; sin ejecución de cuenta.</small></div>').join(''):'<p class="quiet">Sin seguimientos simulados. Se inician desde una ficha automática con riesgo y costes configurados.</p>';dp('paperRows').innerHTML=html;dp('systemPositions').innerHTML=html;}
 }
