@@ -8,7 +8,7 @@ export class PaperBook{
   if(sizing?.status!=='SIMULACION'||!(sizing.quantity>0)||!Number.isFinite(feePct)||feePct<0||idea.market==='SPOT'&&idea.side==='SHORT')throw Error('CONFIGURACION_DE_SIMULACION_INCOMPLETA');
   if(!['LONG','SHORT'].includes(idea.side)||idea.targets.length!==3)throw Error('TESIS_NO_ADMITIDA_PARA_SIMULACION');
   const rows=this.read(),old=rows.find(x=>x.sourceId===(idea.lifecycleId||idea.id));if(old)return old;
-  const p={id:planUUID(),sourceId:idea.lifecycleId||idea.id,mode:idea.mode||'PAPER_LEGACY',horizon:idea.horizon||null,leverage:sizing.leverage??null,marginUsd:sizing.estimatedMargin??null,symbol:idea.symbol,market:idea.market,side:idea.side,entry:idea.entry,stop:idea.stop,targets:[...idea.targets],quantity:sizing.quantity,remaining:sizing.quantity,fee:feePct/100,state:'SIM_PENDIENTE',armedAt:now,net:0,targetIndex:0,events:[],policy:'FILLS_HIPOTETICOS_POR_TICKS; TERCIOS; COMISION_DECLARADA; SIN_LIQUIDEZ_O_CUENTA_REAL'};
+  const p={id:planUUID(),sourceId:idea.lifecycleId||idea.id,mode:idea.mode||'PAPER_LEGACY',horizon:idea.horizon||null,leverage:sizing.leverage??null,marginUsd:sizing.estimatedMargin??null,slippageRate:sizing.slippageRate??0,fundingStatus:idea.mode?.startsWith('PERP_')?'UNKNOWN_NOT_INCLUDED':'NOT_APPLICABLE',symbol:idea.symbol,market:idea.market,side:idea.side,entry:idea.entry,stop:idea.stop,targets:[...idea.targets],quantity:sizing.quantity,remaining:sizing.quantity,fee:feePct/100,state:'SIM_PENDIENTE',armedAt:now,net:0,targetIndex:0,events:[],policy:'FILLS_HIPOTETICOS_POR_TICKS; TERCIOS; COMISION_DECLARADA; SIN_LIQUIDEZ_O_CUENTA_REAL'};
   rows.unshift(p);this.write(rows);return p;
  }
  armPerpLab(risk,{symbol,sourceAsOf,feeRate=.0006}={},now=Date.now()){
@@ -19,12 +19,12 @@ export class PaperBook{
   if(targets.some(x=>x<=0))throw Error('TARGET_PERP_FUERA_DE_PRECIO_VALIDO');
   const sourceId=['PAPER_PERP',risk.lane,symbol,risk.side,risk.horizon,risk.leverage,sourceAsOf,risk.entry,risk.stop].join(':');
   const idea={id:sourceId,lifecycleId:sourceId,mode:risk.lane,horizon:risk.horizon,symbol,market:'PERP',side:risk.side,entry:risk.entry,stop:risk.stop,targets};
-  const sizing={status:'SIMULACION',quantity:risk.quantity,leverage:risk.leverage,estimatedMargin:risk.marginUsd};
+  const sizing={status:'SIMULACION',quantity:risk.quantity,leverage:risk.leverage,estimatedMargin:risk.marginUsd,slippageRate:risk.slippageRate};
   return this.arm(idea,sizing,feeRate*100,now);
  }
  armStagedSpot(plan,now=Date.now()){
   if(plan?.status!=='PAPER_ELIGIBLE'||plan.mode!=='SPOT_EXPLOSIVO'||plan.market!=='SPOT'||plan.side!=='LONG'||plan.leverage!==1||!Array.isArray(plan.stages)||plan.stages.length!==3)throw Error('PLAN_SPOT_INCOMPLETO');
-  const rows=this.read(),sourceId=['SPOT_EXPLOSIVO',plan.symbol,plan.sourceAsOf,plan.stages.map(x=>x.limitPrice).join(',')].join(':');
+  const rows=this.read(),sourceId=['SPOT_EXPLOSIVO',plan.symbol,plan.sourceAsOf,plan.budgetUsd,plan.stop,plan.stages.map(x=>x.limitPrice).join(',')].join(':');
   const existing=rows.find(x=>x.sourceId===sourceId);if(existing)return existing;
   const p={id:planUUID(),sourceId,mode:'SPOT_EXPLOSIVO',symbol:plan.symbol,market:'SPOT',side:'LONG',leverage:1,budgetUsd:plan.budgetUsd,stop:plan.stop,stages:plan.stages.map(x=>({...x})),exitGains:[...plan.exitGains],exitWeights:[...plan.exitWeights],feeRate:plan.feeRate,slippageRate:plan.slippageRate,state:'SIM_PENDIENTE',armedAt:now,lastAsOf:0,quantity:0,remaining:0,entryNotionalUsd:0,entryFeesUsd:0,exitFeesUsd:0,avgEntry:0,exitStarted:false,targetIndex:0,net:0,unrealized:0,events:[],policy:'SOLO_SIMULACION_TICKS_FRESCOS_SPOT; TRES_COMPRAS_CUATRO_VENTAS; NO_ORDEN_REAL'};
   rows.unshift(p);this.write(rows);return p;
@@ -41,12 +41,12 @@ export class PaperBook{
    const sign=p.side==='LONG'?1:-1;p.lastAsOf=q.ts;p.lastPrice=q.price;
    if(p.state==='SIM_PENDIENTE'){
     if(sign*(q.price-p.stop)<=0){p.state='SIM_CANCELADA';p.events.push({at:q.ts,type:'GAP_O_STOP_ANTES_DE_ENTRADA',price:q.price});changed=true;continue;}
-    if(sign*(q.price-p.entry)<=0){p.state='SIM_ABIERTA';p.net=-p.quantity*p.entry*p.fee;p.events.push({at:q.ts,type:'ENTRADA_HIPOTETICA',price:p.entry});changed=true;}
+    if(sign*(q.price-p.entry)<=0){const fill=p.entry*(1+sign*(p.slippageRate||0));p.entryFillPrice=fill;p.state='SIM_ABIERTA';p.net=-p.quantity*fill*p.fee;p.events.push({at:q.ts,type:'ENTRADA_HIPOTETICA',price:fill,trigger:p.entry,costs:'FEE_Y_SLIPPAGE_SUPUESTOS_SIN_FUNDING'});changed=true;}
    }
    if(p.state==='SIM_ABIERTA'){
-    if(sign*(q.price-p.stop)<=0){const price=q.price;p.net+=p.remaining*(sign*(price-p.entry)-price*p.fee);p.events.push({at:q.ts,type:'STOP_SIMULADO_PRECIO_OBSERVADO',price,quantity:p.remaining});p.remaining=0;p.state='SIM_CERRADA';changed=true;}
-    else while(p.targetIndex<3&&sign*(q.price-p.targets[p.targetIndex])>=0){const quantity=p.targetIndex===2?p.remaining:p.quantity/3,price=p.targets[p.targetIndex];p.net+=quantity*(sign*(price-p.entry)-price*p.fee);p.remaining=Math.max(0,p.remaining-quantity);p.events.push({at:q.ts,type:'TP'+(p.targetIndex+1)+'_SIMULADO',price,quantity});p.targetIndex++;if(p.targetIndex===3)p.state='SIM_CERRADA';changed=true;}
-    p.unrealized=p.remaining*sign*(q.price-p.entry);changed=true;
+    if(sign*(q.price-p.stop)<=0){const price=q.price*(1-sign*(p.slippageRate||0));p.net+=p.remaining*(sign*(price-(p.entryFillPrice??p.entry))-price*p.fee);p.events.push({at:q.ts,type:'STOP_SIMULADO_PRECIO_OBSERVADO',price,quantity:p.remaining});p.remaining=0;p.state='SIM_CERRADA';changed=true;}
+    else while(p.targetIndex<3&&sign*(q.price-p.targets[p.targetIndex])>=0){const quantity=p.targetIndex===2?p.remaining:p.quantity/3,price=p.targets[p.targetIndex]*(1-sign*(p.slippageRate||0));p.net+=quantity*(sign*(price-(p.entryFillPrice??p.entry))-price*p.fee);p.remaining=Math.max(0,p.remaining-quantity);p.events.push({at:q.ts,type:'TP'+(p.targetIndex+1)+'_SIMULADO',price,quantity});p.targetIndex++;if(p.targetIndex===3)p.state='SIM_CERRADA';changed=true;}
+    p.unrealized=p.remaining*sign*(q.price-(p.entryFillPrice??p.entry));changed=true;
    }
   }
   if(changed)this.write(rows);
