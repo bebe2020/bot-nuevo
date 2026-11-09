@@ -22,6 +22,7 @@ export class DashboardPanels{
   dp('spotTrancheForm').onsubmit=e=>{e.preventDefault();this.armSpotTranches();};
   dp('perpRiskCalc').onclick=()=>this.calculatePerpLab();
   dp('perpArmPaper').onclick=()=>this.calculatePerpLab({arm:true});
+  dp('exportPaperLog').onclick=()=>this.exportPaperLog();
   dp('perpLane').onchange=()=>{const swing=dp('perpLane').value==='PERP_SWING';dp('perpHorizon').value=swing?'SEMANAL':'MICRO_PIVOTE';dp('perpLeverage').value=swing?'3':'20';dp('perpRiskFraction').value=swing?'0.01':'0.005';};
   this.renderAgents();
  }
@@ -145,5 +146,15 @@ export class DashboardPanels{
    }catch(e){dp('perpRiskStatus').innerHTML+='<p class="warn">No se abrió PAPER: '+de(e.message)+'</p>';}
   }
  }
- renderPaper(){let rows=[];try{rows=this.paper.read();}catch{}const html=rows.length?rows.map(x=>'<div class="paper-position"><strong>'+de(x.symbol+' · '+x.market+' · '+x.side+(x.leverage?' x'+x.leverage:''))+'</strong><span>'+de(x.state)+'</span>'+(x.mode==='SPOT_EXPLOSIVO'?dr('Compras por tramos',x.stages.map(st=>'T'+st.index+': '+(st.filled?'PAPER':st.canceled?'CANCELADA':'PENDIENTE')).join(' / '))+dr('Ventas parciales ejecutadas en PAPER',x.targetIndex+' / 4'):'')+dr('Cantidad hipotética / restante',df(x.quantity)+' / '+df(x.remaining))+dr('Neto de salidas simuladas',df(x.net)+' USDT')+dr('No realizado hipotético',df(x.unrealized)+' USDT')+'<small>Simulación por ticks con comisiones declaradas; sin ejecución de cuenta.</small></div>').join(''):'<p class="quiet">Sin seguimientos simulados. Se inician desde una ficha automática con riesgo y costes configurados.</p>';dp('paperRows').innerHTML=html;dp('systemPositions').innerHTML=html;}
+ exportPaperLog(){
+  try{
+   const trades=this.paper.read(),asof=Date.now();
+   const file={kind:'PAPER_NO_REAL',source:'LOCAL_STORAGE_EN_ESTE_NAVEGADOR',asof,capitalRealUsd:0,fundingPerp:'NO_VERIFICADO',trades};
+   const blob=new Blob([JSON.stringify(file,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download='bot-nuevo-paper-'+new Date(asof).toISOString().slice(0,10)+'.json';a.click();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+   dp('paperExportStatus').textContent=trades.length+' registros PAPER exportados del navegador. No implica operaciones reales ni copia en servidor.';
+  }catch(e){dp('paperExportStatus').textContent='No se pudo exportar: '+e.message;}
+ }
+ renderPaper(){let rows=[];try{rows=this.paper.read();}catch{}const html=rows.length?rows.map(x=>'<div class="paper-position"><strong>'+de(x.symbol+' · '+x.market+' · '+x.side+(x.leverage?' x'+x.leverage:''))+'</strong><span>'+de(x.state)+'</span>'+(x.mode==='SPOT_EXPLOSIVO'?dr('Compras por tramos',x.stages.map(st=>'T'+st.index+': '+(st.filled?'PAPER':st.canceled?'CANCELADA':'PENDIENTE')).join(' / '))+dr('Ventas parciales ejecutadas en PAPER',x.targetIndex+' / 4'):'')+dr('Cantidad hipotética / restante',df(x.quantity)+' / '+df(x.remaining))+dr(x.market==='PERP'?'Resultado PAPER sin funding':'Resultado PAPER con costes supuestos',df(x.net)+' USDT')+dr('No realizado hipotético',df(x.unrealized)+' USDT')+'<small>Simulación por ticks con comisiones declaradas; sin ejecución de cuenta.</small></div>').join(''):'<p class="quiet">Sin seguimientos simulados. Se inician desde una ficha automática con riesgo y costes configurados.</p>';dp('paperRows').innerHTML=html;dp('systemPositions').innerHTML=html;}
 }
