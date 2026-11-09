@@ -1,0 +1,44 @@
+# Especificación integral — PANEL PRINCIPAL + OCÉANO + CAZADOR 54
+Fecha de solicitud: 2026-11-09 (Argentina). Destino: proyecto PERSONAL `bebe2020/bot-nuevo`; preparación para trabajar en ChatGPT Work con Sol 1. Referencia de requisitos: issue #5. Este documento es una especificación solicitada, NO implementación completada ni señal de trading.
+
+## Principio obligatorio
+**NO empezar por una moneda aislada**. Analizar y mostrar en este orden: panorama global/acciones/FX/commodities → macro Océano y fuentes monetarias FRED → régimen criptomercado → amplitud/narrativas/flujo/supply → 54 activos canónicos → estructura técnica multitemporal y zonas de liquidez → perfiles × mercado × horizonte → escenarios de ejecución/abstención. Un único contrato de hechos fechado, sin mezclar magnitudes, sedes, mercados ni velas abiertas. Que la interfaz sea apta para Samsung, con un panel principal de lectura rápida y drill-down profundo.
+
+## PANEL PRINCIPAL: lectura macro y del régimen
+1. Estado general global **alcista/bajista/lateral/transición** por plazo corto, medio y largo; estado independiente del mercado cripto y de cada narrativa; separar señal observada de opinión/modelo.
+2. Miedo/codicia CRIPTO y, por separado, VIX de acciones; mostrar valor, fecha, fuente y cambio; no tratarlos como iguales.
+3. Mercado de capitales: S&P 500/SPX/SPY, Nasdaq Composite y Nasdaq-100/NDX/QQQ; amplitud, tecnología/IA y semiconductores, rendimiento de bonos US 2Y/10Y, tasas reales cuando haya fuente.
+4. FX y commodities: DXY/dólar, EUR/USD, oro XAU/USD, petróleo WTI/Brent; signo e impacto posible para BTC/críptos, condicionado al contexto; otros activos de referencia si son relevantes.
+5. Política monetaria y FRED: WALCL, WTREGEN (promedio semanal de Treasury General Account), WDTGAL (nivel de miércoles, alternativa preferida para alineación de fechas), RRPONTSYD, reservas WRESBAL; Fed funds/rates, inflación CPI/PCE, NFP/desempleo, curvas de rendimiento. **Distinguir liquidez neta proxy USD de liquidez global observada**; mostrar fórmula, unidades, fecha común y comparabilidad. Incorporar liquidez global M2 (EE.UU., zona euro, China, Japón y otros si están disponibles con desfases) solo con fuentes, moneda/cambio y ventanas explícitas. Sin fuente = UNKNOWN; no usar proxy como cifra global.
+6. Supply y flujos cripto: oferta circulante/total/máxima, inflación/emisión/quemas, vesting/unlocks y fechas; stablecoin supply y variación, BTC ETF/ETH ETF flujos institucionales, exchanges reserves e inflows/outflows solo con fuente y cobertura; BTC dominance; TOTAL/TOTAL2/TOTAL3 y exclusiones según fuente; TVL de DeFi, DEX/perp volúmenes, fees/revenue y comparativas entre narrativas.
+7. Riesgo sistémico: calendario económico y resultados, acontecimientos geopolíticos, noticias verificadas, hack/exploit/cambios regulatorios, alertas de cisne negro **con estado de evidencia, impacto, vencimiento**, nunca prever un cisne negro como certeza.
+8. Radar de narrativas corto/medio/largo: IA, RWA, DeFi, Perp DEX, privacidad, L1/L2, memecoins, etc.; ranking por retornos, breadth, flujos y fundamentos; no confundir retorno con entrada de capital ni sumar dos veces un activo multietiqueta.
+9. Mapa de calor 54: 24h, 7d, 30d, distancia de máximo observado, RSI 4H y tendencia 15m/1h/4h/1d/1w/1mo; 54 filas siempre, con ausencias visibles; **mapa de liquidaciones y clusters real/modelado por separado**.
+
+## MOTOR DE OPORTUNIDADES: matriz completa
+- Mercados: `SPOT` y `PERP USDT`, contratos/símbolos/cotizaciones separados. SPOT compra/acumulación/explosión, venta de tenencia (no SHORT sin margen); PERP LONG y SHORT. Señalar disponibilidad por exchange Bitget/Bybit y homónimos por identidad de contrato. Precio no es fill.
+- Perfiles: AGRESIVO, MODERADO, CONSERVADOR, ULTRAAGRESIVO. Todos comparten hechos y geometría; cambian filtros, admisión, ejecución/riesgo y exposición. ULTRAAGRESIVO no admite confirmación de flujo institucional si falta L2 continuo.
+- Operativas: MICRO_PIVOTE, SCALPING, DIARIO, SWING_SEMANAL, SWING_MENSUAL, TRIMESTRAL, CICLO/ACUMULACIÓN DE AÑOS. **Corto/medio/largo** como lente de estructura y duración para cada estilo; definir formalmente ventanas y evitar mezclar stop de micro con tesis mensual. Para cada horizonte y mercado presentar candidatos y ausencia de evidencia donde proceda.
+- Ejemplos aceptación clave: `MODERADO + PERP + SEMANAL` y `MODERADO + PERP + MENSUAL`, ambos LONG/SHORT, y `AGRESIVO + SPOT + EXPLOSION` frente a `SPOT + ACUMULACION`.
+- Swing trimestral: contexto multimensual y decisiones con velas cerradas, no gatillo ficticio de 3M. Ciclo años: tokenomics, continuidad del proyecto, estado del ciclo y acumulación spot; cobertura 36 meses si disponible, prohibido importar historia de otro token. El usuario quiere también PERP a largo plazo: calcular funding acumulado, márgenes y riesgo de liquidación/ADL; no equipararlo a spot sin vencimiento.
+
+## Confluencias antes de clasificar oportunidades
+1. K1 Macro Océano: régimen de riesgo global y cripto, BTC, dominancia, breadth, liquidez USD/global, tasas y eventos.
+2. K2 Estructura: EMA, RSI, MACD/OBV/VWAP, Fibonacci, F1-F3, BOS/CHOCH, order blocks, FVG, pools de 7d y temporalidad propia, sesión y mapa de calor.
+3. K3 Flujo: volumen/RVOL/CMF/Delta, trades observados, orderbook bid/ask con profundidad, imbalance ponderado, OI delta con intervalo real, funding, liquidaciones **observadas/modeladas**, sweeps/reclaim/absorción con historial temporal real. No certificar OFI/absorción/whale identity con una foto DOM.
+4. K4 Fundamentales: TVL, fees/revenue, usuarios, actividad onchain, tokenomics/unlocks/supply/FDV, concentración, narrativas/catalizadores/competidores y noticias fechadas. 'En descuento' NO es 'infravalorado'.
+5. Confluencia: contradecir el macro no prohíbe mostrar rebote agresivo, pero debe declarar *contratendencia*; siempre separar `OBSERVADA`, `ANTICIPADA`, `GATILLO_CERRADO`, `CONFIRMADA`, `INVALIDADA`, `CADUCADA` y `UNKNOWN`; exponer motivos y abstención. No inventar probabilidad de acierto.
+6. Cada tesis: symbol+contrato+venue+mercado+profile+horizon+side; tiempo de fuente y última vela cerrada; precio y estructura; entrada condicional/limit si procede, SL, TP1/2/3, R:R neto incluyendo fee/funding estimados/slippage y distancia a liquidación si se puede calcular, riesgo nominal/capital/exposición agregada; sin prometer rentabilidad o fills. 3x/5x/7x/10x no son señal automática; evitar que múltiples perfiles del mismo trade dupliquen exposición.
+
+## Panel visual propuesto
+Encabezado estado MACRO GLOBAL y CRIPTO con fuentes/reloj y avisos STALE; tarjetas SPX/QQQ/VIX/DXY/EURUSD/XAU/WTI/UST; bloque FRED/USD vs global y supply stablecoins/unlocks; calendario de riesgos; Océano narrativas por plazos; heatmap 54/spot/perp; mapa clusters/vacíos; explorador de oportunidades por perfil-mercado-horizonte-lado/estado; gráfico técnico multiescala y libro; protocolo K1-K4 + riesgo; diario/alertas y data quality. **Una tarea por vez**: corregir primero señales mal admitidas y salud del feed, luego completar fuentes macro, después expansión y validaciones. El lector nunca debe confundir demo/simulación con mercado real.
+
+## Problemas previos conocidos al 09/11/2026
+- `protocol.js:evaluateIdea` MODERADO permite `flow===UNKNOWN` como `CONFIRMADA` si no hay conflicto; falta regla positiva de K2 o rótulo distinto de confirmación.
+- GitHub `market-data/status.json` documentado 09/11 con lastSuccess 07:20 AR, >8 horas antes de verificación (~15:54 AR), pese a objetivo de cron 5min; necesita alertas de frescura. WS en navegador no prueba ingesta 24/7.
+- Mapa de calor actual ≠ mapa de liquidaciones; datos de liquidaciones externas deben ser verificados y etiquetados como estimaciones, nunca clusters inventados.
+- Por documentación de repo faltan portabilidad/validación de 60 estrategias, macro completo, L2 continuo, whale identity, supply global y noticias. El SNIPER L65 comercial no es este proyecto y fuente L65 completa no figura recuperable en repo.
+- La presente especificación NO significa que las fuentes, cruces ni las 54 tesis estén implementados; cada hito requiere tests y evidencia de navegador + API con fechas.
+
+## Entrega para Work + Sol 1
+Al reanudar: inspeccionar repositorio HEAD y este archivo, issue #5, contrato datos/test, health cron; no sobrescribir trabajo concurrente. Proponer hito verificable y ejecutar secuencialmente: (1) feed/indicaciones de frescura y tests; (2) perfil MODERADO confirmaciones válidas; (3) macro Océano 20+ indicadores con fuentes/UNKNOWN; (4) liquidez map/flows y supply; (5) matriz completa de perfiles y horizontes con validaciones; (6) dashboard móvil; (7) backtest walk-forward y aceptación final antes de trading real. Preservar snapshots SHA, fechas de datos, trazabilidad y README con límites.
