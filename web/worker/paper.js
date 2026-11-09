@@ -1,5 +1,5 @@
 import {planUUID} from './journal.js';
-import {advanceSpotPaper} from './trading-lanes.js';
+import {advanceSpotPaper,validateLane} from './trading-lanes.js';
 export class PaperBook{
  constructor(storage){this.storage=storage;this.key='terminal54-paper-v1';}
  read(){try{const value=JSON.parse(this.storage.getItem(this.key)||'[]');return Array.isArray(value)?value:[];}catch{return [];}}
@@ -8,8 +8,19 @@ export class PaperBook{
   if(sizing?.status!=='SIMULACION'||!(sizing.quantity>0)||!Number.isFinite(feePct)||feePct<0||idea.market==='SPOT'&&idea.side==='SHORT')throw Error('CONFIGURACION_DE_SIMULACION_INCOMPLETA');
   if(!['LONG','SHORT'].includes(idea.side)||idea.targets.length!==3)throw Error('TESIS_NO_ADMITIDA_PARA_SIMULACION');
   const rows=this.read(),old=rows.find(x=>x.sourceId===(idea.lifecycleId||idea.id));if(old)return old;
-  const p={id:planUUID(),sourceId:idea.lifecycleId||idea.id,symbol:idea.symbol,market:idea.market,side:idea.side,entry:idea.entry,stop:idea.stop,targets:[...idea.targets],quantity:sizing.quantity,remaining:sizing.quantity,fee:feePct/100,state:'SIM_PENDIENTE',armedAt:now,net:0,targetIndex:0,events:[],policy:'FILLS_HIPOTETICOS_POR_TICKS; TERCIOS; COMISION_DECLARADA; SIN_LIQUIDEZ_O_CUENTA_REAL'};
+  const p={id:planUUID(),sourceId:idea.lifecycleId||idea.id,mode:idea.mode||'PAPER_LEGACY',horizon:idea.horizon||null,leverage:sizing.leverage??null,marginUsd:sizing.estimatedMargin??null,symbol:idea.symbol,market:idea.market,side:idea.side,entry:idea.entry,stop:idea.stop,targets:[...idea.targets],quantity:sizing.quantity,remaining:sizing.quantity,fee:feePct/100,state:'SIM_PENDIENTE',armedAt:now,net:0,targetIndex:0,events:[],policy:'FILLS_HIPOTETICOS_POR_TICKS; TERCIOS; COMISION_DECLARADA; SIN_LIQUIDEZ_O_CUENTA_REAL'};
   rows.unshift(p);this.write(rows);return p;
+ }
+ armPerpLab(risk,{symbol,sourceAsOf,feeRate=.0006}={},now=Date.now()){
+  if(risk?.status!=='PAPER_ONLY'||!['PERP_INTRADIA','PERP_SWING'].includes(risk.lane)||typeof symbol!=='string'||!symbol.endsWith('USDT')||!Number.isFinite(sourceAsOf)||sourceAsOf>now+5000||now-sourceAsOf>5000||!Number.isFinite(feeRate)||feeRate<0||feeRate>=.05)throw Error('RIESGO_PERP_O_FUENTE_NO_CERTIFICADOS');
+  const checked=validateLane({lane:risk.lane,market:'PERP',side:risk.side,horizon:risk.horizon,leverage:risk.leverage});
+  if(checked.status!=='PAPER_ONLY')throw Error(checked.reason);
+  const sign=risk.side==='LONG'?1:-1,dist=Math.abs(risk.entry-risk.stop),targets=[1,2,3].map(mult=>risk.entry+sign*dist*mult);
+  if(targets.some(x=>x<=0))throw Error('TARGET_PERP_FUERA_DE_PRECIO_VALIDO');
+  const sourceId=['PAPER_PERP',risk.lane,symbol,risk.side,risk.horizon,risk.leverage,sourceAsOf,risk.entry,risk.stop].join(':');
+  const idea={id:sourceId,lifecycleId:sourceId,mode:risk.lane,horizon:risk.horizon,symbol,market:'PERP',side:risk.side,entry:risk.entry,stop:risk.stop,targets};
+  const sizing={status:'SIMULACION',quantity:risk.quantity,leverage:risk.leverage,estimatedMargin:risk.marginUsd};
+  return this.arm(idea,sizing,feeRate*100,now);
  }
  armStagedSpot(plan,now=Date.now()){
   if(plan?.status!=='PAPER_ELIGIBLE'||plan.mode!=='SPOT_EXPLOSIVO'||plan.market!=='SPOT'||plan.side!=='LONG'||plan.leverage!==1||!Array.isArray(plan.stages)||plan.stages.length!==3)throw Error('PLAN_SPOT_INCOMPLETO');
