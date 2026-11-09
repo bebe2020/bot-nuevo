@@ -54,7 +54,7 @@ export function perpRiskPlan({lane,side,horizon,leverage,entry,stop,equityUsd=71
  const adversePct=Math.abs(stop/entry-1)*100,initialMarginBufferPct=100/leverage;
  if(marginUsd>equityUsd*.2)return {status:'BLOCKED',reason:'MARGEN_CONSUME_MAS_20_PCT_CAPITAL',marginUsd};
  if(adversePct>=initialMarginBufferPct*.75)return {status:'BLOCKED',reason:'STOP_CERCA_DE_UMBRAL_TEORICO_LIQUIDACION',adversePct,initialMarginBufferPct};
- return {status:'PAPER_ONLY',lane,side,horizon,leverage,entry,stop,equityUsd,quantity,notionalUsd,marginUsd,riskUsd,adversePct,stopLossAfterFeesAndSlippageUsd:riskUsd,maintenanceTierVerified,liquidationPrice:null,liquidationStatus:'NO_CALCULADA_SIN_MARK_PRECIO_MANTENIMIENTO',realOrdersEnabled:false};
+ return {status:'PAPER_ONLY',lane,side,horizon,leverage,entry,stop,equityUsd,quantity,notionalUsd,marginUsd,riskUsd,feeRate,slippageRate,adversePct,stopLossAfterFeesAndSlippageUsd:riskUsd,maintenanceTierVerified,liquidationPrice:null,liquidationStatus:'NO_CALCULADA_SIN_MARK_PRECIO_MANTENIMIENTO',realOrdersEnabled:false};
 }
 export function portfolioGoal({capitalUsd=710,profitGoalUsd=3500}={}){
  if(!finite(capitalUsd)||capitalUsd<=0||!finite(profitGoalUsd)||profitGoalUsd<0)return {status:'BLOCKED'};
