@@ -39,8 +39,9 @@ export function spotExplosionRadar(raw,{providerAssets=[],getQuote=()=>null,now=
  const tickers=raw.tickers?.ok?raw.tickers.data:[],assets=new Map(providerAssets.map(x=>[x.symbol,x]));
  const items=(raw.rows||[]).map(row=>{
   const metadata=assets.get(row.symbol)||{},ticker=tickers.find(t=>t.symbol===row.symbol)||{},quote=getQuote(row.symbol,'SPOT');
+  const capFresh=Number.isFinite(metadata.marketAsOf)&&metadata.marketAsOf<=now&&now-metadata.marketAsOf<=86400000;
   const freshQuote=quote?.market==='SPOT'&&quote.ts<=now+5000&&now-quote.ts<=5000&&now-quote.received<=5000;
-  return evaluateSpotExplosion({...row,market:'SPOT'},{market:'SPOT',now,marketCapUsd:metadata.marketCap,fdvUsd:metadata.fdv,spotVolume24hUsd:ticker.usdtVolume??ticker.quoteVolume,bid:freshQuote?quote.bid:null,ask:freshQuote?quote.ask:null});
+  return evaluateSpotExplosion({...row,market:'SPOT'},{market:'SPOT',now,marketCapUsd:capFresh?metadata.marketCap:null,fdvUsd:capFresh?metadata.fdv:null,spotVolume24hUsd:ticker.usdtVolume??ticker.quoteVolume,bid:freshQuote?quote.bid:null,ask:freshQuote?quote.ask:null});
  });
  return {status:items.length?'OBSERVATION':'UNKNOWN',market:'SPOT',coverage:items.length,observed:items.filter(x=>x.window).length,items:items.sort((a,b)=>(b.rvol||0)-(a.rvol||0))};
 }
