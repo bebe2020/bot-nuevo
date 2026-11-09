@@ -73,11 +73,39 @@ test('riesgo bidireccional perp con costes, apalancamiento y límite de margen',
 test('meta de 3500 USDT es +493% neto, sin promesas ni claves de ejecución',()=>{
  const g=portfolioGoal();assert.equal(g.totalNeededUsd,4210);assert.ok(Math.abs(g.requiredNetReturnPct-3500/710*100)<1e-9);assert.equal(g.guaranteed,false);
 });
+test('PERP x20 y x30: seguimiento LONG y SHORT registra apalancamiento y spread simulado',()=>{
+ for(const [side,lev,stop,targetQuote] of [['LONG',20,99.8,100.8],['SHORT',30,100.2,99.2]]){
+  const risk=perpRiskPlan({lane:'PERP_INTRADIA',side,horizon:'DIARIO',leverage:lev,entry:100,stop,equityUsd:710,riskFraction:.005,quoteFresh:true,slippageRate:.001});
+  assert.equal(risk.status,'PAPER_ONLY');
+  const book=new PaperBook(storage()),position=book.armPerpLab(risk,{symbol:'MAGMAUSDT',sourceAsOf:NOW-1000},NOW);
+  assert.equal(position.leverage,lev);assert.equal(position.mode,'PERP_INTRADIA');assert.equal(position.fundingStatus,'UNKNOWN_NOT_INCLUDED');
+  const q=(price,delta)=>({market:'PERP',symbol:'MAGMAUSDT',price,ts:NOW+delta,received:NOW+delta,source:'WS'});
+  book.quote(q(100,1),NOW+1);assert.equal(book.read()[0].state,'SIM_ABIERTA');
+  book.quote(q(targetQuote,2),NOW+2);
+  const done=book.read()[0];assert.equal(done.state,'SIM_CERRADA');assert.ok(done.net>0);assert.equal(done.events.filter(x=>x.type.startsWith('TP')).length,3);
+  const duplicate=book.armPerpLab(risk,{symbol:'MAGMAUSDT',sourceAsOf:NOW-1000},NOW);assert.equal(duplicate.id,position.id);
+ }
+});
+test('SPOT al primer TP cancela compras pendientes y no reabre posiciones',()=>{
+ const book=new PaperBook(storage());book.armStagedSpot(spotStagePlan(base),NOW);
+ book.quote(quote(100,1),NOW+1);
+ const before=book.read()[0];assert.equal(before.stages.filter(x=>x.filled).length,1);
+ book.quote(quote(before.avgEntry*1.31,2),NOW+2);
+ const mid=book.read()[0];assert.equal(mid.targetIndex,1);assert.equal(mid.stages.filter(x=>x.canceled).length,2);
+ book.quote(quote(85,3),NOW+3);
+ const after=book.read()[0];assert.equal(after.stages.filter(x=>x.filled).length,1);
+ assert.equal(spotStagePlan({...base,entryPrices:[100,105,90]}).status,'BLOCKED');
+});
+test('PERP no inventa liquidacion y bloquea geometria potencialmente peligrosa',()=>{
+ const r=perpRiskPlan({lane:'PERP_INTRADIA',side:'LONG',horizon:'SCALP',leverage:30,entry:100,stop:97,equityUsd:710,riskFraction:.005,quoteFresh:true});
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.reason,'STOP_CERCA_DE_UMBRAL_TEORICO_LIQUIDACION');
+});
 test('interfaz incluye nuevas modalidades sin quitar Kronos ni paneles antiguos',async()=>{
  const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
  const [ui,panels,build]=await Promise.all([read('worker/ui.js'),read('worker/panels.js'),read('scripts/build.mjs')]);
  for(const id of ['spotRadarRows','spotTrancheForm','spotPlanEntry1','spotPlanEntry2','spotPlanEntry3','spotPlanStop','perpRiskCalc'])assert.ok(ui.includes('id="'+id+'"'));
- assert.ok(ui.includes('data-view="operativa"'));assert.ok(ui.includes('data-panel="lab"'));assert.ok(ui.includes('data-panel="defi"'));
+ assert.ok(ui.includes('data-view="operativa"'));assert.ok(ui.includes('data-panel="lab"'));assert.ok(ui.includes('data-panel="defi"'));assert.ok(ui.includes('id="perpArmPaper"'));
  assert.match(panels,/armStagedSpot/);assert.match(panels,/spotExplosionRadar/);
  assert.match(build,/'trading-lanes.js'/);assert.match(build,/'spot-explosion.js'/);assert.match(build,/'panels.js'/);
 });
