@@ -23,7 +23,7 @@ export class DashboardPanels{
   dp('perpRiskCalc').onclick=()=>this.calculatePerpLab();
   dp('perpArmPaper').onclick=()=>this.calculatePerpLab({arm:true});
   dp('exportPaperLog').onclick=()=>this.exportPaperLog();
-  dp('perpLane').onchange=()=>{const swing=dp('perpLane').value==='PERP_SWING';dp('perpHorizon').value=swing?'SEMANAL':'MICRO_PIVOTE';dp('perpLeverage').value=swing?'3':'20';dp('perpRiskFraction').value=swing?'0.01':'0.005';};
+  dp('perpLane').onchange=()=>{const swing=dp('perpLane').value==='PERP_SWING';const hunt=dp('perpLane').value==='PERP_CAZA';dp('perpHorizon').value=swing?'SEMANAL':hunt?'15m':'MICRO_PIVOTE';dp('perpLeverage').value=swing?'3':hunt?'5':'20';dp('perpRiskFraction').value=swing?'0.01':hunt?'0.0075':'0.005';};
   this.renderAgents();
  }
  budget(){return {riskUSD:n(dp('autoRiskUSD').value),feePct:n(dp('autoFeePct').value),leverage:n(dp('autoLeverage').value)};}
@@ -109,7 +109,7 @@ export class DashboardPanels{
   this.renderAgents();this.renderPaper();
  }
  renderTrading(){
-  const info=portfolioGoal(),titles={SPOT_EXPLOSIVO:'SPOT Explosivo',SPOT_SWING:'SPOT Swing',PERP_INTRADIA:'PERP Scalp / Diario',PERP_SWING:'PERP Swing'};
+  const info=portfolioGoal(),titles={SPOT_EXPLOSIVO:'SPOT Explosivo',SPOT_SWING:'SPOT Swing',PERP_INTRADIA:'PERP Scalp / Diario',PERP_CAZA:'PERP Caza de Liquidez',PERP_SWING:'PERP Swing'};
   dp('tradingLaneCards').innerHTML=Object.entries(TRADING_LANES).map(([id,c])=>'<article class="panel"><h3>'+titles[id]+'</h3>'+dr('Mercado',c.market)+dr('Direcciones',c.sides.join(' / '))+dr('Apalancamiento',c.leverage.map(x=>'x'+x).join(' / '))+dr('Horizontes',c.horizons.join(' · '))+'<p class="quiet">'+de(c.description)+'</p></article>').join('');
   const raw=this.getRaw(),radar=spotExplosionRadar(raw,{providerAssets:this.providers?.defi?.assets||[],getQuote:this.getQuote,now:Date.now()});
   dp('spotRadarStatus').textContent=radar.status==='BLOCKED'?'Radar no ejecutado: seleccioná SPOT arriba.':radar.coverage+' de 54 activos evaluados · '+radar.observed+' con velas 1H suficientes · SOLO OBSERVACION, no son señales ni compras.';
@@ -135,7 +135,8 @@ export class DashboardPanels{
  calculatePerpLab({arm=false}={}){
   const symbol=this.getSymbol(),now=Date.now(),q=this.getQuote(symbol,'PERP');
   const fresh=q&&q.market==='PERP'&&now-q.ts<=5000&&now-q.received<=5000&&q.ts<=now+5000;
-  const r=perpRiskPlan({lane:dp('perpLane').value,side:dp('perpDirection').value,horizon:dp('perpHorizon').value,leverage:Number(dp('perpLeverage').value),entry:Number(dp('perpPlanEntry').value),stop:Number(dp('perpPlanStop').value),equityUsd:710,riskFraction:Number(dp('perpRiskFraction').value),quoteFresh:!!fresh});
+  const meta=this.providers?.defi?.assets?.find(x=>x.symbol===symbol),validCap=meta&&Number.isFinite(meta.marketAsOf)&&now-meta.marketAsOf<86400000&&meta.marketAsOf<=now;
+  const r=perpRiskPlan({lane:dp('perpLane').value,side:dp('perpDirection').value,horizon:dp('perpHorizon').value,leverage:Number(dp('perpLeverage').value),entry:Number(dp('perpPlanEntry').value),stop:Number(dp('perpPlanStop').value),equityUsd:710,riskFraction:Number(dp('perpRiskFraction').value),marketCapUsd:validCap?meta.marketCap:null,volume24hUsd:fresh?q.volume:null,quoteFresh:!!fresh});
   dp('perpRiskStatus').innerHTML=r.status==='PAPER_ONLY'?dr('Dirección / horizonte',r.side+' · '+r.horizon)+dr('Exposición teórica',df(r.notionalUsd)+' USDT')+dr('Margen inicial estimado',df(r.marginUsd)+' USDT')+dr('Pérdida prevista hasta stop, incluidos costes supuestos',df(r.riskUsd)+' USDT')+dr('Liquidación','NO CALCULADA · falta mark price y tier de mantenimiento')+'<p class="quiet">Solo laboratorio. No se generó orden.</p>':'<p class="warn">Bloqueado: '+de(r.reason||r.status)+'</p>';
   if(arm){
    try{
