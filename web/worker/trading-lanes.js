@@ -37,6 +37,7 @@ export function spotStagePlan({symbol,market='SPOT',budgetUsd,entryPrices,stop,f
  if(ok.status==='BLOCKED')return ok;
  if(typeof symbol!=='string'||!symbol.endsWith('USDT')||!finite(budgetUsd)||budgetUsd<=0||!Array.isArray(entryPrices)||entryPrices.length!==entryWeights.length||!entryPrices.every(v=>finite(v)&&v>0)||!validSum(entryWeights)||!validSum(exitWeights)||exitWeights.length!==exitGains.length||exitGains.some(v=>!finite(v)||v<=0)||!finite(stop)||stop<=0||stop>=Math.min(...entryPrices)||!finite(feeRate)||feeRate<0||feeRate>=.05||!finite(slippageRate)||slippageRate<0||slippageRate>=.05)return {status:'BLOCKED',reason:'PLAN_POR_TRAMOS_INVALIDO'};
  if(!finite(sourceAsOf)||sourceAsOf>now+5000||now-sourceAsOf>60000)return {status:'STALE',reason:'PRECIO_SPOT_VENCIDO'};
+ if(entryPrices.some((v,i)=>i>0&&v>=entryPrices[i-1]))return {status:'BLOCKED',reason:'COMPRAS_DEBEN_ESCALONARSE_A_PRECIOS_DECRECIENTES'};
  const stages=entryPrices.map((limitPrice,i)=>({index:i+1,limitPrice,allocationUsd:budgetUsd*entryWeights[i],weight:entryWeights[i],filled:false}));
  return {status:'PAPER_ELIGIBLE',mode:'SPOT_EXPLOSIVO',market:'SPOT',side:'LONG',leverage:1,symbol,sourceAsOf,createdAt:now,budgetUsd,stop,feeRate,slippageRate,stages,exitWeights:[...exitWeights],exitGains:[...exitGains],expectedOrderType:'BUY_LIMIT_HYPOTHETICAL',realOrdersEnabled:false};
 }
@@ -74,6 +75,7 @@ export function advanceSpotPaper(paper,quote,now=Date.now()){
   event(label,{price,quantity:qty,netUsd:net});
  };
  if(quote.price<=p.stop){
+  for(const stage of p.stages)if(!stage.filled)stage.canceled=true;
   if(p.remaining>0){sell(p.remaining,quote.price,'STOP_SPOT_PAPER_PRECIO_OBSERVADO');p.state='SIM_CERRADA';}
   else {p.state='SIM_CANCELADA';event('STOP_ANTES_DE_COMPRAS_PAPER',{price:quote.price});}
   p.lastAsOf=quote.ts;return p;
@@ -89,7 +91,7 @@ export function advanceSpotPaper(paper,quote,now=Date.now()){
   for(let i=p.targetIndex;i<p.exitGains.length;i++){
    const target=p.avgEntry*(1+p.exitGains[i]);
    if(quote.price<target)break;
-   if(!p.exitStarted){p.exitStarted=true;p.exitBaselineQty=p.remaining;}
+   if(!p.exitStarted){p.exitStarted=true;p.exitBaselineQty=p.remaining;for(const stage of p.stages)if(!stage.filled)stage.canceled=true;}
    const qty=i===p.exitGains.length-1?p.remaining:Math.min(p.remaining,p.exitBaselineQty*p.exitWeights[i]);
    if(qty<=0)break;
    sell(qty,target,'VENTA_TRAMO_TP'+(i+1)+'_PAPER');p.targetIndex=i+1;
