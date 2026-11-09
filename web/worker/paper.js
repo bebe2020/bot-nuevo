@@ -1,4 +1,5 @@
 import {planUUID} from './journal.js';
+import {advanceSpotPaper} from './trading-lanes.js';
 export class PaperBook{
  constructor(storage){this.storage=storage;this.key='terminal54-paper-v1';}
  read(){try{const value=JSON.parse(this.storage.getItem(this.key)||'[]');return Array.isArray(value)?value:[];}catch{return [];}}
@@ -10,10 +11,22 @@ export class PaperBook{
   const p={id:planUUID(),sourceId:idea.lifecycleId||idea.id,symbol:idea.symbol,market:idea.market,side:idea.side,entry:idea.entry,stop:idea.stop,targets:[...idea.targets],quantity:sizing.quantity,remaining:sizing.quantity,fee:feePct/100,state:'SIM_PENDIENTE',armedAt:now,net:0,targetIndex:0,events:[],policy:'FILLS_HIPOTETICOS_POR_TICKS; TERCIOS; COMISION_DECLARADA; SIN_LIQUIDEZ_O_CUENTA_REAL'};
   rows.unshift(p);this.write(rows);return p;
  }
+ armStagedSpot(plan,now=Date.now()){
+  if(plan?.status!=='PAPER_ELIGIBLE'||plan.mode!=='SPOT_EXPLOSIVO'||plan.market!=='SPOT'||plan.side!=='LONG'||plan.leverage!==1||!Array.isArray(plan.stages)||plan.stages.length!==3)throw Error('PLAN_SPOT_INCOMPLETO');
+  const rows=this.read(),sourceId=['SPOT_EXPLOSIVO',plan.symbol,plan.sourceAsOf,plan.stages.map(x=>x.limitPrice).join(',')].join(':');
+  const existing=rows.find(x=>x.sourceId===sourceId);if(existing)return existing;
+  const p={id:planUUID(),sourceId,mode:'SPOT_EXPLOSIVO',symbol:plan.symbol,market:'SPOT',side:'LONG',leverage:1,budgetUsd:plan.budgetUsd,stop:plan.stop,stages:plan.stages.map(x=>({...x})),exitGains:[...plan.exitGains],exitWeights:[...plan.exitWeights],feeRate:plan.feeRate,slippageRate:plan.slippageRate,state:'SIM_PENDIENTE',armedAt:now,lastAsOf:0,quantity:0,remaining:0,entryNotionalUsd:0,entryFeesUsd:0,exitFeesUsd:0,avgEntry:0,exitStarted:false,targetIndex:0,net:0,unrealized:0,events:[],policy:'SOLO_SIMULACION_TICKS_FRESCOS_SPOT; TRES_COMPRAS_CUATRO_VENTAS; NO_ORDEN_REAL'};
+  rows.unshift(p);this.write(rows);return p;
+ }
  quote(q,now=Date.now()){
   if(!q||!Number.isFinite(q.price)||q.price<=0||q.ts>now+5000||now-q.ts>5000||now-q.received>5000)return;
   const rows=this.read();let changed=false;
   for(const p of rows){if(p.symbol!==q.symbol||p.market!==q.market||q.ts<p.armedAt||q.ts<=p.lastAsOf||['SIM_CERRADA','SIM_CANCELADA'].includes(p.state))continue;
+   if(p.mode==='SPOT_EXPLOSIVO'){
+    const next=advanceSpotPaper(p,q,now);
+    if(next!==p){Object.assign(p,next);changed=true;}
+    continue;
+   }
    const sign=p.side==='LONG'?1:-1;p.lastAsOf=q.ts;p.lastPrice=q.price;
    if(p.state==='SIM_PENDIENTE'){
     if(sign*(q.price-p.stop)<=0){p.state='SIM_CANCELADA';p.events.push({at:q.ts,type:'GAP_O_STOP_ANTES_DE_ENTRADA',price:q.price});changed=true;continue;}
