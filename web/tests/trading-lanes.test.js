@@ -101,11 +101,25 @@ test('PERP no inventa liquidacion y bloquea geometria potencialmente peligrosa',
  assert.equal(r.status,'BLOCKED');
  assert.equal(r.reason,'STOP_CERCA_DE_UMBRAL_TEORICO_LIQUIDACION');
 });
+
+test('caza PERP LONG/SHORT x3/x5/x7/x10 con límites por capitalización y liquidez',()=>{
+ for(const side of ['LONG','SHORT'])for(const lev of [3,5,7,10]){
+  const risk=perpRiskPlan({lane:'PERP_CAZA',horizon:'15m',side,leverage:lev,entry:100,stop:side==='LONG'?99.5:100.5,equityUsd:710,riskFraction:0.005,quoteFresh:true,marketCapUsd:15e9,volume24hUsd:35e6});
+  assert.equal(risk.status,'PAPER_ONLY',JSON.stringify(risk));
+  const book=new PaperBook(storage());
+  const paper=book.armPerpLab(risk,{symbol:'BTCUSDT',sourceAsOf:NOW-1000},NOW);
+  assert.equal(paper.side,side);assert.equal(paper.leverage,lev);assert.equal(paper.market,'PERP');
+ }
+ assert.equal(perpRiskPlan({lane:'PERP_CAZA',horizon:'15m',side:'LONG',leverage:10,entry:100,stop:99.5,riskFraction:0.005,quoteFresh:true,marketCapUsd:3e9,volume24hUsd:35e6}).reason,'X10_CAZA_SOLO_ALTA_CAPITALIZACION_EN_LABORATORIO');
+ assert.equal(perpRiskPlan({lane:'PERP_CAZA',horizon:'15m',side:'SHORT',leverage:7,entry:100,stop:100.5,riskFraction:0.005,quoteFresh:true,marketCapUsd:3e9,volume24hUsd:1e6}).reason,'LIQUIDEZ_PERP_INSUFICIENTE_PARA_X7_X10');
+ assert.equal(perpRiskPlan({lane:'PERP_SWING',horizon:'SEMANAL',side:'LONG',leverage:7,entry:100,stop:98,riskFraction:0.005,quoteFresh:true,marketCapUsd:3e9,volume24hUsd:35e6}).status,'PAPER_ONLY');
+ assert.equal(perpRiskPlan({lane:'PERP_SWING',horizon:'SEMANAL',side:'LONG',leverage:7,entry:100,stop:98,riskFraction:0.005,quoteFresh:true,marketCapUsd:15e9,volume24hUsd:35e6}).reason,'X7_SWING_SOLO_MEDIANA_CAPITALIZACION_VERIFICADA');
+});
 test('interfaz incluye nuevas modalidades sin quitar Kronos ni paneles antiguos',async()=>{
  const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
  const [ui,panels,build]=await Promise.all([read('worker/ui.js'),read('worker/panels.js'),read('scripts/build.mjs')]);
  for(const id of ['spotRadarRows','spotTrancheForm','spotPlanEntry1','spotPlanEntry2','spotPlanEntry3','spotPlanStop','perpRiskCalc'])assert.ok(ui.includes('id="'+id+'"'));
- assert.ok(ui.includes('data-view="operativa"'));assert.ok(ui.includes('data-panel="lab"'));assert.ok(ui.includes('data-panel="defi"'));assert.ok(ui.includes('id="perpArmPaper"'));assert.ok(ui.includes('id="exportPaperLog"'));assert.match(panels,/exportPaperLog\(\)/);
+ assert.ok(ui.includes('data-view="operativa"'));assert.ok(ui.includes('data-panel="lab"'));assert.ok(ui.includes('data-panel="defi"'));assert.ok(ui.includes('id="perpArmPaper"'));assert.ok(ui.includes('value="PERP_CAZA"'));assert.ok(ui.includes('id="exportPaperLog"'));assert.match(panels,/exportPaperLog\(\)/);
  assert.match(panels,/armStagedSpot/);assert.match(panels,/spotExplosionRadar/);
  assert.match(build,/'trading-lanes.js'/);assert.match(build,/'spot-explosion.js'/);assert.match(build,/'panels.js'/);
 });
