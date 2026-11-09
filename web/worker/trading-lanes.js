@@ -50,7 +50,7 @@ export function perpRiskPlan({lane,side,horizon,leverage,entry,stop,equityUsd=71
  if(lane==='PERP_SWING'&&leverage===7&&tier!=='MEDIA')return {status:'BLOCKED',reason:'X7_SWING_SOLO_MEDIANA_CAPITALIZACION_VERIFICADA',tier};
  if(lane==='PERP_CAZA'&&leverage>=7&&!(tier==='MEDIA'||tier==='ALTA'))return {status:'BLOCKED',reason:'X7_X10_REQUIERE_CAPITALIZACION_VERIFICADA',tier};
  if(lane==='PERP_CAZA'&&leverage===10&&tier!=='ALTA')return {status:'BLOCKED',reason:'X10_CAZA_SOLO_ALTA_CAPITALIZACION_EN_LABORATORIO',tier};
- if(leverage>=7&&(!finite(volume24hUsd)||volume24hUsd<10000000))return {status:'BLOCKED',reason:'LIQUIDEZ_PERP_INSUFICIENTE_PARA_X7_X10',volume24hUsd};
+ if((lane==='PERP_CAZA'||lane==='PERP_SWING')&&leverage>=7&&(!finite(volume24hUsd)||volume24hUsd<10000000))return {status:'BLOCKED',reason:'LIQUIDEZ_PERP_INSUFICIENTE_PARA_X7_X10',volume24hUsd};
  if(!finite(riskFraction)||riskFraction<=0||riskFraction>cap)return {status:'BLOCKED',reason:'RIESGO_SOBREPASA_TOPE_DE_LABORATORIO',maxRiskFraction:cap};
  if(!finite(entry)||!finite(stop)||entry<=0||stop<=0||side==='LONG'&&stop>=entry||side==='SHORT'&&stop<=entry||!finite(equityUsd)||equityUsd<=0||!finite(feeRate)||feeRate<0||!finite(slippageRate)||slippageRate<0)return {status:'BLOCKED',reason:'GEOMETRIA_O_COSTES_INVALIDOS'};
  if(!quoteFresh)return {status:'BLOCKED',reason:'COTIZACION_NO_FRESCA'};
