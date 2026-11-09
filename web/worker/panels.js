@@ -21,6 +21,7 @@ export class DashboardPanels{
   for(const id of ['onchainTable','assetRanking','hyperTable'])dp(id).addEventListener('click',e=>this.action(e));
   dp('spotTrancheForm').onsubmit=e=>{e.preventDefault();this.armSpotTranches();};
   dp('perpRiskCalc').onclick=()=>this.calculatePerpLab();
+  dp('perpArmPaper').onclick=()=>this.calculatePerpLab({arm:true});
   dp('perpLane').onchange=()=>{const swing=dp('perpLane').value==='PERP_SWING';dp('perpHorizon').value=swing?'SEMANAL':'MICRO_PIVOTE';dp('perpLeverage').value=swing?'3':'20';dp('perpRiskFraction').value=swing?'0.01':'0.005';};
   this.renderAgents();
  }
@@ -130,11 +131,19 @@ export class DashboardPanels{
    this.renderPaper();
   }catch(e){dp('spotPlanStatus').textContent='NO SE INICIÓ: '+e.message;}
  }
- calculatePerpLab(){
+ calculatePerpLab({arm=false}={}){
   const symbol=this.getSymbol(),now=Date.now(),q=this.getQuote(symbol,'PERP');
   const fresh=q&&q.market==='PERP'&&now-q.ts<=5000&&now-q.received<=5000&&q.ts<=now+5000;
   const r=perpRiskPlan({lane:dp('perpLane').value,side:dp('perpDirection').value,horizon:dp('perpHorizon').value,leverage:Number(dp('perpLeverage').value),entry:Number(dp('perpPlanEntry').value),stop:Number(dp('perpPlanStop').value),equityUsd:710,riskFraction:Number(dp('perpRiskFraction').value),quoteFresh:!!fresh});
-  dp('perpRiskStatus').innerHTML=r.status==='PAPER_ONLY'?dr('Dirección / horizonte',r.side+' · '+r.horizon)+dr('Exposición teórica',df(r.notionalUsd)+' USDT')+dr('Margen inicial estimado',df(r.marginUsd)+' USDT')+dr('Pérdida prevista hasta stop, incluidos costes supuestos',df(r.riskUsd)+' USDT')+dr('Liquidación','NO CALCULADA · falta mark price y tier de mantenimiento')+'<p class="quiet">Solo laboratorio. No se generó orden, ni ejecución simulada.</p>':'<p class="warn">Bloqueado: '+de(r.reason||r.status)+'</p>';
+  dp('perpRiskStatus').innerHTML=r.status==='PAPER_ONLY'?dr('Dirección / horizonte',r.side+' · '+r.horizon)+dr('Exposición teórica',df(r.notionalUsd)+' USDT')+dr('Margen inicial estimado',df(r.marginUsd)+' USDT')+dr('Pérdida prevista hasta stop, incluidos costes supuestos',df(r.riskUsd)+' USDT')+dr('Liquidación','NO CALCULADA · falta mark price y tier de mantenimiento')+'<p class="quiet">Solo laboratorio. No se generó orden.</p>':'<p class="warn">Bloqueado: '+de(r.reason||r.status)+'</p>';
+  if(arm){
+   try{
+    if(this.getMarket()!=='PERP'||r.status!=='PAPER_ONLY')throw Error(r.reason||'El mercado elegido debe ser PERP y el cálculo debe ser válido');
+    const opened=this.paper.armPerpLab(r,{symbol,sourceAsOf:q.ts},now);
+    dp('perpRiskStatus').innerHTML+='<p>Posición PAPER condicional '+de(opened.symbol+' · '+opened.side+' x'+opened.leverage)+' · estado '+de(opened.state)+' · NO ES ORDEN REAL.</p>';
+    this.renderPaper();
+   }catch(e){dp('perpRiskStatus').innerHTML+='<p class="warn">No se abrió PAPER: '+de(e.message)+'</p>';}
+  }
  }
- renderPaper(){let rows=[];try{rows=this.paper.read();}catch{}const html=rows.length?rows.map(x=>'<div class="paper-position"><strong>'+de(x.symbol+' · '+x.market+' · '+x.side)+'</strong><span>'+de(x.state)+'</span>'+(x.mode==='SPOT_EXPLOSIVO'?dr('Compras por tramos',x.stages.map(st=>'T'+st.index+': '+(st.filled?'PAPER':'PENDIENTE')).join(' / '))+dr('Ventas parciales ejecutadas en PAPER',x.targetIndex+' / 4'):'')+dr('Cantidad hipotética / restante',df(x.quantity)+' / '+df(x.remaining))+dr('Neto de salidas simuladas',df(x.net)+' USDT')+dr('No realizado hipotético',df(x.unrealized)+' USDT')+'<small>Simulación por ticks con comisiones declaradas; sin ejecución de cuenta.</small></div>').join(''):'<p class="quiet">Sin seguimientos simulados. Se inician desde una ficha automática con riesgo y costes configurados.</p>';dp('paperRows').innerHTML=html;dp('systemPositions').innerHTML=html;}
+ renderPaper(){let rows=[];try{rows=this.paper.read();}catch{}const html=rows.length?rows.map(x=>'<div class="paper-position"><strong>'+de(x.symbol+' · '+x.market+' · '+x.side+(x.leverage?' x'+x.leverage:''))+'</strong><span>'+de(x.state)+'</span>'+(x.mode==='SPOT_EXPLOSIVO'?dr('Compras por tramos',x.stages.map(st=>'T'+st.index+': '+(st.filled?'PAPER':st.canceled?'CANCELADA':'PENDIENTE')).join(' / '))+dr('Ventas parciales ejecutadas en PAPER',x.targetIndex+' / 4'):'')+dr('Cantidad hipotética / restante',df(x.quantity)+' / '+df(x.remaining))+dr('Neto de salidas simuladas',df(x.net)+' USDT')+dr('No realizado hipotético',df(x.unrealized)+' USDT')+'<small>Simulación por ticks con comisiones declaradas; sin ejecución de cuenta.</small></div>').join(''):'<p class="quiet">Sin seguimientos simulados. Se inician desde una ficha automática con riesgo y costes configurados.</p>';dp('paperRows').innerHTML=html;dp('systemPositions').innerHTML=html;}
 }
