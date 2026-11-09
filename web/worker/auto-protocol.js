@@ -13,9 +13,9 @@ export function directionalReading(row,horizon,protocols,sectors,allRows){
  const global=autoMedian(allRows.map(x=>n(x.change)===null?null:x.change*100));
  const groups=sectors.filter(x=>x.symbols?.includes(row.symbol)&&n(x.median24h)!==null),relative=groups.length&&global!==null?autoMedian(groups.map(x=>x.median24h))-global:null;
  const oce=relative===null?null:Math.abs(relative)<.25?0:relative>0?1:-1;
- const components={est:{value:est,known:known.length,total:3,method:'REGIMEN_DE_LOS_TRES_FRACTALES'},mom:{value:mom,known:momentum.length,total:3,method:'RSI14_MACD_Y_PENDIENTE_RSI'},flu:{value:flu,known:flow.length,total:3,method:'CMF_OBV_ADL_CERRADOS; PROXIES_CORRELACIONADOS'},oce:{value:oce,known:relative===null?0:1,total:1,method:'MEDIANA_SECTOR_RELATIVA_AL_UNIVERSO_24H',relative}};
+ const components={est:{value:est,known:known.length,total:3,method:'REGIMEN_DE_LOS_TRES_FRACTALES'},mom:{value:mom,known:momentum.length,total:3,method:'RSI14_MACD_Y_PENDIENTE_RSI'},flu:{value:flu,known:flow.length,total:3,method:'CMF_OBV_ADL_CERRADOS; PROXIES_CORRELACIONADOS'},oce:{value:oce,known:relative===null?0:1,total:1,method:'MEDIANA_SECTOR_RELATIVA_AL_UNIVERSO_24H; NO_ES_MOTOR_OCEANO_V46',relative}};
  const values=Object.values(components).map(x=>x.value).filter(x=>x!==null),total=values.length?values.reduce((s,x)=>s+x,0):null;
- return {side:total===null?'UNKNOWN':total>0?'LONG':total<0?'SHORT':'NEUTRAL',balance:total,observed:values.length,components,frames,status:values.length===4?'OK':'PARTIAL',method:'BALANCE_DESCRIPTIVO; NO_PROBABILIDAD; NO_VETO_GLOBAL'};
+ return {side:total===null?'UNKNOWN':total>0?'LONG':total<0?'SHORT':'NEUTRAL',balance:total,observed:values.length,components,frames,status:values.length===4?'OK':'PARTIAL',method:'BALANCE_DESCRIPTIVO; COMPONENTE_OCE_ES_ROTACION_LOCAL_NO_OCEANO_V46; NO_PROBABILIDAD; NO_VETO_GLOBAL'};
 }
 export function watchObservation(row,quote=null,now=Date.now()){
  const valid=quote?.market===row.market&&quote.symbol===row.symbol&&now-quote.ts<=5000&&now-quote.received<=5000&&quote.ts<=now+5000;
