@@ -12,7 +12,7 @@ export class PaperBook{
   rows.unshift(p);this.write(rows);return p;
  }
  armPerpLab(risk,{symbol,sourceAsOf,feeRate=.0006}={},now=Date.now()){
-  if(risk?.status!=='PAPER_ONLY'||!['PERP_INTRADIA','PERP_SWING'].includes(risk.lane)||typeof symbol!=='string'||!symbol.endsWith('USDT')||!Number.isFinite(sourceAsOf)||sourceAsOf>now+5000||now-sourceAsOf>5000||!Number.isFinite(feeRate)||feeRate<0||feeRate>=.05)throw Error('RIESGO_PERP_O_FUENTE_NO_CERTIFICADOS');
+  if(risk?.status!=='PAPER_ONLY'||!['PERP_INTRADIA','PERP_CAZA','PERP_SWING'].includes(risk.lane)||typeof symbol!=='string'||!symbol.endsWith('USDT')||!Number.isFinite(sourceAsOf)||sourceAsOf>now+5000||now-sourceAsOf>5000||!Number.isFinite(feeRate)||feeRate<0||feeRate>=.05)throw Error('RIESGO_PERP_O_FUENTE_NO_CERTIFICADOS');
   const checked=validateLane({lane:risk.lane,market:'PERP',side:risk.side,horizon:risk.horizon,leverage:risk.leverage});
   if(checked.status!=='PAPER_ONLY')throw Error(checked.reason);
   const sign=risk.side==='LONG'?1:-1,dist=Math.abs(risk.entry-risk.stop),targets=[1,2,3].map(mult=>risk.entry+sign*dist*mult);
