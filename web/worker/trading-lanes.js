@@ -4,7 +4,8 @@ export const TRADING_LANES=Object.freeze({
  SPOT_EXPLOSIVO:Object.freeze({market:'SPOT',sides:['LONG'],leverage:[1],horizons:['1H','4H','14H','24H','36H'],entryWeights:[.40,.35,.25],exitWeights:[.25,.25,.25,.25],exitGains:[.30,.50,.80,1.00],description:'Compras escalonadas y ventas parciales; +30/50/80/100% son escenarios, no previsiones'}),
  SPOT_SWING:Object.freeze({market:'SPOT',sides:['LONG'],leverage:[1],horizons:['SEMANAL','MENSUAL','TRIMESTRAL','CICLO_3_ANOS'],description:'Acumulación spot por tramos y salidas estructurales'}),
  PERP_INTRADIA:Object.freeze({market:'PERP',sides:['LONG','SHORT'],leverage:[20,30],horizons:['MICRO_PIVOTE','SCALP','DIARIO'],description:'Scalping y diario bidireccionales; x20/x30 solo laboratorio, sujetos a liquidación'}),
- PERP_SWING:Object.freeze({market:'PERP',sides:['LONG','SHORT'],leverage:[3,5],horizons:['SEMANAL','MENSUAL','TRIMESTRAL'],description:'Swing bidireccional semanal/mensual/trimestral; ciclo 3 años solo contexto'})
+ PERP_CAZA:Object.freeze({market:'PERP',sides:['LONG','SHORT'],leverage:[3,5,7,10],horizons:['15m','1H','4H','DIARIO'],description:'Caza táctica bidireccional. x7/x10 solo PAPER con clasificación/liquidez verificadas y sin liquidación certificada'}),
+ PERP_SWING:Object.freeze({market:'PERP',sides:['LONG','SHORT'],leverage:[3,5,7],horizons:['SEMANAL','MENSUAL','TRIMESTRAL'],description:'Swing LONG/SHORT x3/x5; x7 solo mediana capitalización verificada, ciclo de 3 años como contexto'})
 });
 export const CAPITAL_TARGET=Object.freeze({initialUsdt:710,targetNetProfitUsdt:3500,requiredNetReturnPct:3500/710*100,realOrdersEnabled:false});
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
@@ -41,10 +42,15 @@ export function spotStagePlan({symbol,market='SPOT',budgetUsd,entryPrices,stop,f
  const stages=entryPrices.map((limitPrice,i)=>({index:i+1,limitPrice,allocationUsd:budgetUsd*entryWeights[i],weight:entryWeights[i],filled:false}));
  return {status:'PAPER_ELIGIBLE',mode:'SPOT_EXPLOSIVO',market:'SPOT',side:'LONG',leverage:1,symbol,sourceAsOf,createdAt:now,budgetUsd,stop,feeRate,slippageRate,stages,exitWeights:[...exitWeights],exitGains:[...exitGains],expectedOrderType:'BUY_LIMIT_HYPOTHETICAL',realOrdersEnabled:false};
 }
-export function perpRiskPlan({lane,side,horizon,leverage,entry,stop,equityUsd=710,riskFraction,feeRate=.0006,slippageRate=.001,maintenanceTierVerified=false,quoteFresh=false}={}){
+export function perpRiskPlan({lane,side,horizon,leverage,entry,stop,equityUsd=710,riskFraction,feeRate=.0006,slippageRate=.001,marketCapUsd=null,volume24hUsd=null,maintenanceTierVerified=false,quoteFresh=false}={}){
  const contract=validateLane({lane,market:'PERP',side,horizon,leverage});
  if(contract.status==='BLOCKED')return contract;
- const cap=lane==='PERP_INTRADIA' ? 0.005 : 0.01;
+ const cap=lane==='PERP_INTRADIA' ? 0.005 : lane==='PERP_CAZA' ? 0.0075 : 0.01;
+ const tier=marketCapTier(marketCapUsd).tier;
+ if(lane==='PERP_SWING'&&leverage===7&&tier!=='MEDIA')return {status:'BLOCKED',reason:'X7_SWING_SOLO_MEDIANA_CAPITALIZACION_VERIFICADA',tier};
+ if(lane==='PERP_CAZA'&&leverage>=7&&!(tier==='MEDIA'||tier==='ALTA'))return {status:'BLOCKED',reason:'X7_X10_REQUIERE_CAPITALIZACION_VERIFICADA',tier};
+ if(lane==='PERP_CAZA'&&leverage===10&&tier!=='ALTA')return {status:'BLOCKED',reason:'X10_CAZA_SOLO_ALTA_CAPITALIZACION_EN_LABORATORIO',tier};
+ if(leverage>=7&&(!finite(volume24hUsd)||volume24hUsd<10000000))return {status:'BLOCKED',reason:'LIQUIDEZ_PERP_INSUFICIENTE_PARA_X7_X10',volume24hUsd};
  if(!finite(riskFraction)||riskFraction<=0||riskFraction>cap)return {status:'BLOCKED',reason:'RIESGO_SOBREPASA_TOPE_DE_LABORATORIO',maxRiskFraction:cap};
  if(!finite(entry)||!finite(stop)||entry<=0||stop<=0||side==='LONG'&&stop>=entry||side==='SHORT'&&stop<=entry||!finite(equityUsd)||equityUsd<=0||!finite(feeRate)||feeRate<0||!finite(slippageRate)||slippageRate<0)return {status:'BLOCKED',reason:'GEOMETRIA_O_COSTES_INVALIDOS'};
  if(!quoteFresh)return {status:'BLOCKED',reason:'COTIZACION_NO_FRESCA'};
@@ -54,7 +60,7 @@ export function perpRiskPlan({lane,side,horizon,leverage,entry,stop,equityUsd=71
  const adversePct=Math.abs(stop/entry-1)*100,initialMarginBufferPct=100/leverage;
  if(marginUsd>equityUsd*.2)return {status:'BLOCKED',reason:'MARGEN_CONSUME_MAS_20_PCT_CAPITAL',marginUsd};
  if(adversePct>=initialMarginBufferPct*.75)return {status:'BLOCKED',reason:'STOP_CERCA_DE_UMBRAL_TEORICO_LIQUIDACION',adversePct,initialMarginBufferPct};
- return {status:'PAPER_ONLY',lane,side,horizon,leverage,entry,stop,equityUsd,quantity,notionalUsd,marginUsd,riskUsd,feeRate,slippageRate,adversePct,stopLossAfterFeesAndSlippageUsd:riskUsd,maintenanceTierVerified,liquidationPrice:null,liquidationStatus:'NO_CALCULADA_SIN_MARK_PRECIO_MANTENIMIENTO',realOrdersEnabled:false};
+ return {status:'PAPER_ONLY',lane,side,horizon,leverage,tier,marketCapUsd,volume24hUsd,entry,stop,equityUsd,quantity,notionalUsd,marginUsd,riskUsd,feeRate,slippageRate,adversePct,stopLossAfterFeesAndSlippageUsd:riskUsd,maintenanceTierVerified,liquidationPrice:null,liquidationStatus:'NO_CALCULADA_SIN_MARK_PRECIO_MANTENIMIENTO',realOrdersEnabled:false};
 }
 export function portfolioGoal({capitalUsd=710,profitGoalUsd=3500}={}){
  if(!finite(capitalUsd)||capitalUsd<=0||!finite(profitGoalUsd)||profitGoalUsd<0)return {status:'BLOCKED'};
