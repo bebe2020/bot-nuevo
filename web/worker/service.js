@@ -3,6 +3,7 @@ import {VERSION,UNIVERSE,FRAMES,HORIZONS,POLICIES,n,fact,closed,endOfBar,structu
 import {HTML} from './ui.js';
 import {acquire,assemble,makeCoverage} from './collector.js';
 import {publicContext} from './context.js';
+import {sosoProvider} from './sosovalue.js';
 const PUBLIC_ASSETS = '__BUILD_PUBLIC_ASSETS__';
 const snapshotKey=(symbol,market='PERP')=>'latest/v2/'+market+'/'+symbol+'.json';
 
@@ -63,9 +64,10 @@ export default {async fetch(request,env){
  const url=new URL(request.url);try{
   if(url.pathname==='/'&&request.method==='GET')return new Response(HTML,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.bitget.com wss://ws.bitget.com; img-src 'self' data:; frame-ancestors 'self' https://chatgpt.com https://*.chatgpt.com; object-src 'none'; base-uri 'self'",'X-Content-Type-Options':'nosniff'}});
   if(request.method==='GET'&&typeof PUBLIC_ASSETS==='object'&&PUBLIC_ASSETS[url.pathname]){const a=PUBLIC_ASSETS[url.pathname];return new Response(a.body,{headers:{'Content-Type':a.type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
-  if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:'protocolo-2.0',featureSet:'radar54-modules-20261107',labModules:5,liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
+  if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:'protocolo-2.0',admissionRevision:'20261111-fresh-flow',fundamentalSeries:20,featureSet:'radar54-modules-20261107',labModules:5,liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
   if(url.pathname==='/api/cloud'){const {raw,...status}=await cloudFeed();return json(status);}
   if(url.pathname==='/api/context'&&request.method==='GET')return json(await publicContext(env.BUCKET));
+  if(url.pathname==='/api/sosovalue'&&request.method==='GET')return json(await sosoProvider(env.BUCKET,env.SOSOVALUE_API_KEY));
   if(url.pathname==='/api/providers'&&request.method==='GET')return json(await globalProviders(env.BUCKET));
   if(url.pathname==='/api/cross-assets'&&request.method==='GET')return json(await crossAssetProviders(env.BUCKET));
   if(url.pathname==='/api/onchain'&&request.method==='GET')return json(await onchainProvider(env.BUCKET,url.searchParams.get('symbol')||'BTCUSDT'));
