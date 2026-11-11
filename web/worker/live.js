@@ -1,3 +1,4 @@
+import {priceChanges} from './market-contract.js';
 // Transporte público: un mensaje recibido no confirma una operación ni un setup.
 export const LIVE_VERSION='live-1.0';
 export const BITGET_WS='wss://ws.bitget.com/v2/ws/public';
@@ -11,7 +12,7 @@ export function tickerMessage(text,symbols,received=Date.now(),market='PERP'){
  if(String(a.instType).toUpperCase()!==(market==='SPOT'?'SPOT':'USDT-FUTURES')||(a.channel??a.topic)!=='ticker'||!symbols.includes(symbol)||!Array.isArray(m.data))return null;
  const r=m.data[0]||{},price=liveNumber(r.lastPr??r.lastPrice),ts=liveNumber(r.ts??m.ts);
  if(price===null||price<=0||ts===null||!Number.isInteger(ts)||ts<0||ts>received+5000)return null;
- return {kind:'QUOTE',symbol,price,ts,received,source:'WS',market,bid:liveNumber(r.bidPr??r.bid1Price),ask:liveNumber(r.askPr??r.ask1Price),change:liveNumber(r.change24h??r.price24hPcnt),fundingRate:liveNumber(r.fundingRate),nextFunding:liveNumber(r.nextFundingTime)};
+ return {kind:'QUOTE',symbol,price,ts,received,source:'WS',market,changes:priceChanges(r,market),high24h:liveNumber(r.high24h),low24h:liveNumber(r.low24h),volume:liveNumber(r.usdtVolume??r.quoteVolume),markPrice:liveNumber(r.markPrice),oiBase:market==='PERP'?liveNumber(r.holdingAmount):null,bid:liveNumber(r.bidPr??r.bid1Price),ask:liveNumber(r.askPr??r.ask1Price),change:priceChanges(r,market).ROLLING_24H.value,fundingRate:liveNumber(r.fundingRate),nextFunding:liveNumber(r.nextFundingTime)};
 }
 export function quoteState(quote,now=Date.now()){
  if(!quote)return 'ESPERANDO_DATOS';

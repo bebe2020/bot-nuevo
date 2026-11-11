@@ -1,6 +1,7 @@
 // Captura pública programable. Nunca lee cuentas ni datos del sitio privado.
 import {acquire,assemble,primeCache} from '../worker/collector.js';
 import {VERSION} from '../worker/engine.js';
+import {publicContext} from '../worker/context.js';
 import {pathToFileURL} from 'node:url';
 export const DATA_BRANCH='market-data';
 export async function githubRequest(repository,token,path,method='GET',body,fetcher=fetch){
@@ -10,9 +11,9 @@ export async function githubRequest(repository,token,path,method='GET',body,fetc
 }
 export function publicSummary(raw){
  const s=assemble(raw);if(!s.ticker.lastPr||s.structures['15m'].status!=='OK')throw Error('SIN_CAPTURA_PUBLICA_VALIDA');
- return {id:Math.floor(raw.received/60000)+':'+raw.symbol,received:raw.received,asof:s.sourceAsOf,symbol:raw.symbol,prices:s.universe.map(x=>({symbol:x.symbol,price:x.price,change:x.change})),source:'BITGET_PUBLICO',accountData:false};
+ return {id:Math.floor(raw.received/60000)+':'+raw.symbol,received:raw.received,asof:s.sourceAsOf,symbol:raw.symbol,prices:(s.radarUniverse||s.universe).map(x=>({symbol:x.symbol,market:x.market||s.market,price:x.price,change:x.change})),watch:s.watchlist?.filter(x=>x.attention)||[],source:'BITGET_PUBLICO',accountData:false};
 }
-export async function publishFeed({repository,token,raw,error=null,fetcher=fetch,now=Date.now()}){
+export async function publishFeed({repository,token,raw,context=null,error=null,fetcher=fetch,now=Date.now()}){
  if(!token)throw Error('TOKEN_DE_WORKFLOW_NO_DISPONIBLE');
  const api=(p,m,b)=>githubRequest(repository,token,p,m,b,fetcher);let ref;
  try{ref=await api('/git/ref/heads/'+DATA_BRANCH);}catch(e){if(e.status!==404)throw e;const main=await api('/git/ref/heads/main');ref=await api('/git/refs','POST',{ref:'refs/heads/'+DATA_BRANCH,sha:main.object.sha});}
@@ -24,6 +25,7 @@ export async function publishFeed({repository,token,raw,error=null,fetcher=fetch
   history=history.filter(x=>x.id!==summary.id).concat(summary).slice(-400);
   entries.push({path:'latest.json',mode:'100644',type:'blob',content:JSON.stringify(raw)},{path,mode:'100644',type:'blob',content:JSON.stringify({day,records:history})});
  }
+ if(context&&(context.macro?.value||context.calendar?.items?.length||context.news?.items?.length))entries.push({path:'context.json',mode:'100644',type:'blob',content:JSON.stringify(context)});
  entries.push({path:'status.json',mode:'100644',type:'blob',content:JSON.stringify(status)});
  const tree=await api('/git/trees','POST',{base_tree:commit.tree.sha,tree:entries});const next=await api('/git/commits','POST',{message:error?'Registrar fallo de captura pública':'Actualizar captura pública de mercado',tree:tree.sha,parents:[parent]});
  await api('/git/refs/heads/'+DATA_BRANCH,'PATCH',{sha:next.sha,force:false});return {commit:next.sha,status};
@@ -31,6 +33,7 @@ export async function publishFeed({repository,token,raw,error=null,fetcher=fetch
 export async function main(){
  const repository=process.env.GITHUB_REPOSITORY,token=process.env.GITHUB_TOKEN;let raw;
  try{if(/^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/.test(repository||'')){try{const prior=await fetch('https://raw.githubusercontent.com/'+repository+'/market-data/latest.json',{signal:AbortSignal.timeout(10000)});if(prior.ok)primeCache(await prior.json());}catch{}}raw=await acquire('BTCUSDT');publicSummary(raw);}catch(e){if(token)await publishFeed({repository,token,error:e.message});throw e;}
- const result=await publishFeed({repository,token,raw});console.log(JSON.stringify({state:result.status.state,sourceAsOf:result.status.sourceAsOf,received:raw.received,commit:result.commit,branch:DATA_BRANCH}));
+ const context=await publicContext(null);
+ const result=await publishFeed({repository,token,raw,context});console.log(JSON.stringify({state:result.status.state,sourceAsOf:result.status.sourceAsOf,received:raw.received,commit:result.commit,branch:DATA_BRANCH,context:{macro:context.macro?.status,calendar:context.calendar?.status,news:context.news?.status}}));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(e=>{console.error('Captura pública fallida: '+e.message);process.exitCode=1;});

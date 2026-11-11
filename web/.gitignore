@@ -6,3 +6,7 @@ dist/
 
 node_modules/
 .local-*
+
+__pycache__/
+*.pyc
+.venv/
