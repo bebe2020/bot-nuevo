@@ -5,7 +5,7 @@ Proyecto personal `bebe2020/bot-nuevo`. Este trabajo no modifica los motores del
 ## Fallos corregidos
 
 1. MODERADO admitía `CONFIRMADA` con flujo `UNKNOWN`. Ahora MODERADO y CONSERVADOR requieren contexto a favor, gatillo cerrado, flujo positivo observado, precio reciente y geometría completa. AGRESIVO conserva contratendencia explícita, pero tampoco confirma flujo desconocido.
-2. Se revalidan las evidencias de fichas cacheadas: un tick nuevo no rejuvenece CMF, libro, trades ni estructura antiguos. Se comprueban símbolo y mercado. Libro: 5 segundos; muestra de trades: 60 segundos; velas/contexto: cadencia de su temporalidad. La invalidación y caducidad conservan prioridad.
+2. Se revalidan las evidencias de fichas cacheadas: un tick nuevo no rejuvenece CMF, libro, trades ni estructura antiguos. Se comprueban símbolo y mercado. Libro: 5 segundos; muestra de trades: 60 segundos; velas/contexto: cierres alineados de cada temporalidad, con hasta diez segundos de gracia al nuevo cierre. Se conservó la política protocolo-2.1 de la versión concurrente, con namespace de eventos 2.0. La invalidación y caducidad conservan prioridad.
 3. La geometría requiere entrada/stop positivos, tick conocido y tres objetivos ordenados del lado correcto. Los objetivos provienen de las temporalidades de ese horizonte; un plan diario no incorpora un pivote mensual solo por estar cerca.
 4. Una tarea antigua que termina después de iniciar otra con el mismo identificador ya no marca finalizada la ejecución nueva. Los errores de acceso/configuración de proveedores tampoco se muestran como una conexión operativa.
 5. SoSoValue se incorpora con conector exclusivamente servidor, cobertura de 20 series y UI. Sin `SOSOVALUE_API_KEY`, devuelve `CONFIG_REQUIRED`, valores nulos y 0/20; no hay clave configurada en el sitio en esta revisión.
@@ -91,4 +91,8 @@ Hay referencias para oro, TLT/IEF, DXY, SP500, BTC; rendimientos nominales 2/10/
 
 ## Validación de esta revisión
 
-124 pruebas Node aprobadas (103 previas, 12 de admisión/cache/target/tareas y 9 del conector SoSoValue). Build ESM y validación del artefacto correctos. Navegador Chrome: 20 tarjetas y aviso de configuración visibles; marco de 360px con ancho útil de 345px y scrollWidth de 345px, sin desborde del documento. No es una prueba en el Android físico. Solo se consultan endpoints públicos de mercado en producción; historial y planes privados no se inspeccionan.
+137 pruebas Node aprobadas (103 previas, 12 de admisión/cache/target/tareas, 13 de la integración concurrente de frescura y publicación, y 9 del conector SoSoValue). Build ESM y validación del artefacto correctos. Navegador Chrome: 20 tarjetas y aviso de configuración visibles; marco de 360px con ancho útil de 345px y scrollWidth de 345px, sin desborde del documento. No es una prueba en el Android físico. Solo se consultan endpoints públicos de mercado en producción; historial y planes privados no se inspeccionan.
+
+## Conciliación de edición concurrente
+
+Antes de publicar avanzó la fuente nativa a `3b0e7907d390d30dac214dca16be2dec983234f3` (versión 10). Se fusionó su control de cierres calendario, banner de frescura, hash de build y reintentos de publicación con SoSoValue, aislamiento de objetivos por horizonte y control de tareas de esta revisión. No se forzó ni sobrescribió el historial.

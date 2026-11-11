@@ -1,3 +1,5 @@
+import {feedHealth,frameClock} from './freshness.js';
+import {refreshEvaluation,PROTOCOL_VERSION} from './protocol.js';
 import {globalProviders,crossAssetProviders,onchainProvider,kronosProvider,publicWatchHistory} from './providers.js';
 import {VERSION,UNIVERSE,FRAMES,HORIZONS,POLICIES,n,fact,closed,endOfBar,structures,profileFacts,bookFacts,fundingFact,tradesFact,quarterBars,ema,netLiquidity,fredCSV,CHECKS,riskPlan} from './engine.js';
 import {HTML} from './ui.js';
@@ -5,6 +7,7 @@ import {acquire,assemble,makeCoverage} from './collector.js';
 import {publicContext} from './context.js';
 import {sosoProvider} from './sosovalue.js';
 const PUBLIC_ASSETS = '__BUILD_PUBLIC_ASSETS__';
+const BUILD_INFO='__BUILD_INFO__';
 const snapshotKey=(symbol,market='PERP')=>'latest/v2/'+market+'/'+symbol+'.json';
 
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
@@ -18,6 +21,8 @@ async function macroData(bucket,fetcher,now){
 }
 export function freshen(snapshot,now){
  const s=structuredClone(snapshot);s.served=now;
+ for(const [tf,f] of Object.entries(s.structures||{})){if(f.status==='OK'&&frameClock(s,tf,now).state!=='OK'){f.observedStatus=f.status;f.status=frameClock(s,tf,now).state;}}
+ for(const idea of [...Object.values(s.plans||{}).flat(),...(s.opportunities||[])])for(const [profile,e] of Object.entries(idea.evaluations||{}))idea.evaluations[profile]=refreshEvaluation(e,idea,now);
  if(s.book?.asof&&now-s.book.asof>5000){s.book.observedStatus=s.book.observedStatus||s.book.status;s.book.status='STALE';for(const p of Object.values(s.profiles||{})){p.observedAttention=p.observedAttention??p.attention;p.attention=null;for(const c of Object.values(p.checklists||{})){c.observedConfluence=c.observedConfluence||c.confluence;c.confluence='DATOS_VENCIDOS';}}const c=s.coverage?.find(x=>x.id==='10');if(c)c.state='STALE';}
  return s;
 }
@@ -51,10 +56,10 @@ export async function ingest(bucket,raw,{maxAgeMs=120000,collector='NAVEGADOR_O_
 const FEED_ROOT='https://raw.githubusercontent.com/bebe2020/bot-nuevo/market-data/';
 let publicCloudCache=null;
 export async function cloudFeed(fetcher=fetch,now=Date.now()){
- if(fetcher===fetch&&publicCloudCache?.until>now)return publicCloudCache.value;
+ if(fetcher===fetch&&publicCloudCache?.until>now)return feedHealth(publicCloudCache.value,now);
  const read=async path=>{const r=await fetcher(FEED_ROOT+path+'?minute='+Math.floor(now/60000),{redirect:'manual',signal:AbortSignal.timeout(8000),headers:{Accept:'application/json'}});if(!r.ok)throw Error('GITHUB_FEED_HTTP_'+r.status);const text=await r.text();if(text.length>12000000)throw Error('CAPTURA_DEMASIADO_GRANDE');return JSON.parse(text);};
  try{const status=await read('status.json');if(!['OK','ERROR'].includes(status.state)||status.accountData!==false)throw Error('ESTADO_NUBE_NO_VALIDO');const raw=status.state==='OK'?await read('latest.json'):null;
-  const value={...status,state:status.state==='OK'&&(!Number.isFinite(status.lastSuccess)||now-status.lastSuccess>900000)?'STALE':status.state,raw,checkedAt:now};if(fetcher===fetch)publicCloudCache={until:now+300000,value};return value;
+  const value={...status,raw};if(fetcher===fetch)publicCloudCache={until:now+60000,value};return feedHealth(value,now);
  }catch(e){return {state:'UNKNOWN',errors:[err(e)],checkedAt:now,raw:null};}
 }
 async function mergedHistory(bucket){
@@ -64,10 +69,10 @@ export default {async fetch(request,env){
  const url=new URL(request.url);try{
   if(url.pathname==='/'&&request.method==='GET')return new Response(HTML,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.bitget.com wss://ws.bitget.com; img-src 'self' data:; frame-ancestors 'self' https://chatgpt.com https://*.chatgpt.com; object-src 'none'; base-uri 'self'",'X-Content-Type-Options':'nosniff'}});
   if(request.method==='GET'&&typeof PUBLIC_ASSETS==='object'&&PUBLIC_ASSETS[url.pathname]){const a=PUBLIC_ASSETS[url.pathname];return new Response(a.body,{headers:{'Content-Type':a.type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
-  if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:'protocolo-2.0',admissionRevision:'20261111-fresh-flow',fundamentalSeries:20,featureSet:'radar54-modules-20261107',labModules:5,liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
+  if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:PROTOCOL_VERSION,admissionRevision:'20261111-fresh-flow',fundamentalSeries:20,build:typeof BUILD_INFO==='object'?BUILD_INFO:null,featureSet:'terminal-integrada-20261111',labModules:5,liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
   if(url.pathname==='/api/cloud'){const {raw,...status}=await cloudFeed();return json(status);}
-  if(url.pathname==='/api/context'&&request.method==='GET')return json(await publicContext(env.BUCKET));
   if(url.pathname==='/api/sosovalue'&&request.method==='GET')return json(await sosoProvider(env.BUCKET,env.SOSOVALUE_API_KEY));
+  if(url.pathname==='/api/context'&&request.method==='GET')return json(await publicContext(env.BUCKET));
   if(url.pathname==='/api/providers'&&request.method==='GET')return json(await globalProviders(env.BUCKET));
   if(url.pathname==='/api/cross-assets'&&request.method==='GET')return json(await crossAssetProviders(env.BUCKET));
   if(url.pathname==='/api/onchain'&&request.method==='GET')return json(await onchainProvider(env.BUCKET,url.searchParams.get('symbol')||'BTCUSDT'));

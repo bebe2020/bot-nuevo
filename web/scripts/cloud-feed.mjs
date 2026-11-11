@@ -13,12 +13,25 @@ export function publicSummary(raw){
  const s=assemble(raw);if(!s.ticker.lastPr||s.structures['15m'].status!=='OK')throw Error('SIN_CAPTURA_PUBLICA_VALIDA');
  return {id:Math.floor(raw.received/60000)+':'+raw.symbol,received:raw.received,asof:s.sourceAsOf,symbol:raw.symbol,prices:(s.radarUniverse||s.universe).map(x=>({symbol:x.symbol,market:x.market||s.market,price:x.price,change:x.change})),watch:s.watchlist?.filter(x=>x.attention)||[],source:'BITGET_PUBLICO',accountData:false};
 }
+// Independently computed public feeds share one branch. Rebase their disjoint
+// paths after a ref race; never force a push or rerun an inference to publish it.
+export async function publishDataEntries(api,entries,message){
+ for(let attempt=0;attempt<3;attempt++){
+  let ref;try{ref=await api('/git/ref/heads/'+DATA_BRANCH);}catch(e){
+   if(e.status!==404)throw e;const main=await api('/git/ref/heads/main');
+   try{ref=await api('/git/refs','POST',{ref:'refs/heads/'+DATA_BRANCH,sha:main.object.sha});}catch(createError){if(createError.status===422)continue;throw createError;}
+  }
+  const parent=ref.object.sha,base=await api('/git/commits/'+parent);
+  const tree=await api('/git/trees','POST',{base_tree:base.tree.sha,tree:entries});
+  const commit=await api('/git/commits','POST',{message,tree:tree.sha,parents:[parent]});
+  try{await api('/git/refs/heads/'+DATA_BRANCH,'PATCH',{sha:commit.sha,force:false});return commit.sha;}catch(e){if(![409,422].includes(e.status)||attempt===2)throw e;}
+ }
+ throw Error('CONFLICTO_PUBLICACION_PUBLICA');
+}
 export async function publishFeed({repository,token,raw,context=null,error=null,fetcher=fetch,now=Date.now()}){
  if(!token)throw Error('TOKEN_DE_WORKFLOW_NO_DISPONIBLE');
- const api=(p,m,b)=>githubRequest(repository,token,p,m,b,fetcher);let ref;
- try{ref=await api('/git/ref/heads/'+DATA_BRANCH);}catch(e){if(e.status!==404)throw e;const main=await api('/git/ref/heads/main');ref=await api('/git/refs','POST',{ref:'refs/heads/'+DATA_BRANCH,sha:main.object.sha});}
- const parent=ref.object.sha,commit=await api('/git/commits/'+parent),entries=[];
- const status={version:VERSION,universe:54,lastAttempt:now,state:error?'ERROR':'OK',source:'BITGET_PUBLICO',targetIntervalMinutes:5,errors:error?[String(error).slice(0,160)]:[],accountData:false};
+ const api=(p,m,b)=>githubRequest(repository,token,p,m,b,fetcher),entries=[];
+ const status={version:VERSION,universe:54,lastAttempt:now,state:error?'ERROR':'OK',source:'BITGET_PUBLICO',targetIntervalMinutes:5,codeRevision:process.env.GITHUB_SHA||null,runId:process.env.GITHUB_RUN_ID||null,errors:error?[String(error).slice(0,160)]:[],accountData:false};
  if(raw){const summary=publicSummary(raw);raw.version=VERSION;status.lastSuccess=raw.received;status.sourceAsOf=summary.asof;
   const day=new Date(raw.received).toISOString().slice(0,10),path='history/'+day+'.json';let history=[];
   try{const file=await api('/contents/'+path+'?ref='+DATA_BRANCH);history=JSON.parse(Buffer.from(file.content,'base64').toString('utf8')).records||[];}catch(e){if(e.status!==404)throw e;}
@@ -27,8 +40,7 @@ export async function publishFeed({repository,token,raw,context=null,error=null,
  }
  if(context&&(context.macro?.value||context.calendar?.items?.length||context.news?.items?.length))entries.push({path:'context.json',mode:'100644',type:'blob',content:JSON.stringify(context)});
  entries.push({path:'status.json',mode:'100644',type:'blob',content:JSON.stringify(status)});
- const tree=await api('/git/trees','POST',{base_tree:commit.tree.sha,tree:entries});const next=await api('/git/commits','POST',{message:error?'Registrar fallo de captura pública':'Actualizar captura pública de mercado',tree:tree.sha,parents:[parent]});
- await api('/git/refs/heads/'+DATA_BRANCH,'PATCH',{sha:next.sha,force:false});return {commit:next.sha,status};
+ const commit=await publishDataEntries(api,entries,error?'Registrar fallo de captura pública':'Actualizar captura pública de mercado');return {commit,status};
 }
 export async function main(){
  const repository=process.env.GITHUB_REPOSITORY,token=process.env.GITHUB_TOKEN;let raw;
