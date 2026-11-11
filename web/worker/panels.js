@@ -1,5 +1,5 @@
 import {n,FRAMES} from '/engine.js';
-import {PROTOCOLS,evaluateIdea} from '/protocol.js';
+import {PROTOCOLS,evaluateIdea,refreshIdeaEvaluation} from '/protocol.js';
 import {INDICATOR_CATALOG} from '/technicals.js';
 import {unifiedRow,returnTone,quoteMetric} from '/market-contract.js';
 import {automaticSizing,watchObservation} from '/auto-protocol.js';
@@ -42,7 +42,7 @@ export class DashboardPanels{
  render(){this.renderAutomatic();this.renderWatch();this.renderAccumulation();this.renderPaper();const view=this.getView();if(view==='defi')this.renderDeFi();if(view==='hyper')this.renderHyper();if(view==='onchain'){this.renderChainTable();this.renderOnchain();}if(view==='rotation')this.renderRotation();if(view==='lab')this.renderLab();}
  ideaFor(row){const s=this.getSnapshot(),horizon=this.getHorizon(),profile=this.getProfile(),tf=PROTOCOLS[horizon].frames[0],maxAge=(FRAMES[tf]||86400000)*4,now=Date.now();
   const candidates=(s?.opportunities||[]).filter(x=>x.symbol===row.symbol&&x.market===row.market&&x.horizon===horizon&&now-x.formed<=maxAge);
-  return candidates.map(x=>{let e=x.evaluations?.[profile];const q=this.getQuote(x.symbol,x.market);if(s.symbol===x.symbol&&s.market===x.market)e=evaluateIdea({...s,currentPrice:q&&now-q.ts<5000?q.price:null},x,profile,now);if((!q||now-q.ts>=5000||now-q.received>=5000)&&e?.admission==='CONFIRMADA')e={...e,admission:'ESPERA_PRECIO_FRESCO'};if(q&&now-q.ts<5000&&(x.side==='LONG'?q.price<=x.stop:q.price>=x.stop))e={...e,admission:'INVALIDADA',phase:'INVALIDADA'};if(this.isInvalidated?.(x))e={...e,phase:'INVALIDADA',admission:'INVALIDADA'};return {...x,e};}).filter(x=>x.e&&!['INVALIDADA','CADUCADA'].includes(x.e.phase)).sort((a,b)=>(b.e.admission==='CONFIRMADA')-(a.e.admission==='CONFIRMADA'))[0]||null;
+  return candidates.map(x=>{let e=x.evaluations?.[profile];const q=this.getQuote(x.symbol,x.market);e=refreshIdeaEvaluation(x,e,q,now);if(s.symbol===x.symbol&&s.market===x.market)e=evaluateIdea({...s,currentPrice:q&&now-q.ts<5000?q.price:null,currentPriceAsOf:q?.ts},x,profile,now);if((!q||now-q.ts>=5000||now-q.received>=5000)&&e?.admission==='CONFIRMADA')e={...e,admission:'ESPERA_PRECIO_FRESCO'};if(q&&now-q.ts<5000&&(x.side==='LONG'?q.price<=x.stop:q.price>=x.stop))e={...e,admission:'INVALIDADA',phase:'INVALIDADA'};if(this.isInvalidated?.(x))e={...e,phase:'INVALIDADA',admission:'INVALIDADA'};return {...x,e};}).filter(x=>x.e&&!['INVALIDADA','CADUCADA'].includes(x.e.phase)).sort((a,b)=>(b.e.admission==='CONFIRMADA')-(a.e.admission==='CONFIRMADA'))[0]||null;
  }
  readingText(reading){if(!reading)return 'Pendiente';return ['est','mom','flu','oce'].map(k=>k+' '+(reading.components[k].value===null?'N/D':reading.components[k].value>0?'+'+reading.components[k].value:reading.components[k].value)).join(' · ');}
  renderAutomatic(){const s=this.getSnapshot();if(!s)return;const rows=this.rows(),horizon=this.getHorizon(),p=PROTOCOLS[horizon],profile=this.getProfile();this.currentIdeas.clear();

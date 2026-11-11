@@ -1,9 +1,9 @@
 export class TaskMonitor{
  constructor(onChange=()=>{}){this.onChange=onChange;this.tasks=new Map();this.events=[];}
  begin(id,label,engine='DATOS_Y_REGLAS'){const task={id,label,engine,state:'RUNNING',started:performance.now(),startedAt:Date.now(),runs:(this.tasks.get(id)?.runs||0)+1};this.tasks.set(id,task);this.emit(id,'Inicio');return task;}
- finish(id,summary='',state='OK'){const t=this.tasks.get(id);if(!t)return;t.state=state;t.durationMs=performance.now()-t.started;t.finishedAt=Date.now();t.summary=summary;this.emit(id,summary);}
+ finish(run,summary='',state='OK'){const id=typeof run==='string'?run:run.id,t=this.tasks.get(id);if(!t||typeof run==='object'&&t!==run)return;t.state=state;t.durationMs=performance.now()-t.started;t.finishedAt=Date.now();t.summary=summary;this.emit(id,summary);}
  emit(id,message){const t=this.tasks.get(id);this.events.unshift({at:Date.now(),id,state:t?.state,message});this.events=this.events.slice(0,60);this.onChange(this);}
- async run(id,label,fn,engine){this.begin(id,label,engine);try{const value=await fn();this.finish(id,value?.status||'Respuesta recibida',['STALE','PARTIAL','UNKNOWN','NO_INFERENCE'].includes(value?.status)?value.status:'OK');return value;}catch(e){this.finish(id,e.message,'ERROR');throw e;}}
+ async run(id,label,fn,engine){const task=this.begin(id,label,engine);try{const value=await fn();this.finish(task,value?.status||'Respuesta recibida',['STALE','PARTIAL','UNKNOWN','NO_INFERENCE'].includes(value?.status)?value.status:'OK');return value;}catch(e){this.finish(task,e.message,'ERROR');throw e;}}
  snapshot(){return {tasks:[...this.tasks.values()],events:this.events};}
 }
 const LAB_COLORS={OK:'#00ffc3',RUNNING:'#00ddff',ERROR:'#ff327c',STALE:'#ffdb55',UNKNOWN:'#8693b0'};
