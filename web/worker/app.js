@@ -201,3 +201,5 @@ boot();
 
 syncPaper();setInterval(()=>{if(JSON.stringify(paper.read())!==paperSyncedSignature)syncPaper();},15000);
 panels.refreshMacro();panels.refreshCross();panels.refresh();
+
+panels.refreshFundamentals();
