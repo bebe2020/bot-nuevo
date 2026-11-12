@@ -14,3 +14,5 @@ body{background:radial-gradient(ellipse at 12% 0,#102344 0,transparent 46%),radi
 .feed-health{margin:0 0 14px;padding:10px 12px;border:1px solid currentColor;border-radius:8px;font-size:12px;line-height:1.55;overflow-wrap:anywhere;background:#0c1525;}
 
 .macro-overview{border-color:#6742ab;background:linear-gradient(120deg,#151130,#092a32);box-shadow:inset 3px 0 #c66dff}.macro-overview .state-big{font-size:20px}.nav button[aria-selected=true]{box-shadow:inset 0 -2px var(--green)}.panel{border-top-color:#3a416b}.cross-card{border-top:2px solid var(--blue)}#integralProtocol .key{padding:12px;border-left:2px solid var(--violet);margin:8px 0}#integralProtocol .key small{display:block}#macroMetrics strong{font-size:19px;overflow-wrap:anywhere}#macroOverview small{display:block}#macroMetrics{margin-top:14px}button:disabled{cursor:not-allowed}
+
+.automation-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}.automation-bar button{border-color:#00eaff;color:#00eaff}.automation-bar span{font-size:.8rem;color:#adc8e8}#oceanConclusion h3{font-size:1.3rem}#oceanAssetKeys .key{padding:8px 0}summary{cursor:pointer;padding:10px 0;color:#00eaff}

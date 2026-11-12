@@ -82,10 +82,12 @@ export function usdLiquidity(metrics,now=Date.now()) {
     scope:'PROXY_USD_FED; WALCL_Y_TGA_NIVEL_MIERCOLES; RRP_MISMA_FECHA; NO_LIQUIDEZ_GLOBAL'};
 }
 
-async function readMacro(bucket,fetcher,now,{preferMirror=true}={}) {
+const safeMacroError=e=>/^HTTP_\d+$|^CONTRATO_FRED_INVALIDO$|^SERIE_/.test(e.message||'')?e.message:'FUENTE_FRED_NO_DISPONIBLE';
+
+async function readMacro(bucket,fetcher,now,{preferMirror=true,apiKey=null}={}) {
   const file=await bucket?.get('providers/macro-v1.json');
   const prior=file?await file.json():(typeof MACRO_SEED==='object'?MACRO_SEED:null);
-  if (prior?.nextCheck>now&&!prior.metrics?.some(x=>x.error)) return ageMacro(prior,now);
+  if (prior?.nextCheck>now&&(!apiKey||prior.transport==='API_FRED_AUTENTICADA')&&!prior.metrics?.some(x=>x.error)) return ageMacro(prior,now);
   // FRED may reject a Worker while allowing the scheduled public collector.
   // A successful mirror read is a new transport, never a new source timestamp.
   if(preferMirror)try {
@@ -110,13 +112,24 @@ async function readMacro(bucket,fetcher,now,{preferMirror=true}={}) {
       const i=next++,def=MACRO_SERIES[i];
       try {
         const since=new Date(now-550*86400000).toISOString().slice(0,10);
-        const r=await fetcher('https://fred.stlouisfed.org/graph/fredgraph.csv?id='+def.id+'&cosd='+since,{signal:AbortSignal.timeout(7000)});
-        if(!r.ok) throw Error('HTTP_'+r.status);
-        const text=await r.text(); if(text.length>1000000) throw Error('SERIE_DEMASIADO_GRANDE');
-        metrics[i]=macroPoint(def,text,now);
+        let text;
+        if(apiKey){
+          const url=new URL('https://api.stlouisfed.org/fred/series/observations');
+          for(const [k,v] of Object.entries({series_id:def.id,api_key:apiKey,file_type:'json',observation_start:since}))url.searchParams.set(k,v);
+          const r=await fetcher(url.href,{redirect:'manual',signal:AbortSignal.timeout(7000)});
+          if(!r.ok)throw Error('HTTP_'+r.status);
+          const body=await r.json();if(!Array.isArray(body.observations))throw Error('CONTRATO_FRED_INVALIDO');
+          text='observation_date,'+def.id+'\n'+body.observations.map(p=>p.date+','+p.value).join('\n');
+        }else{
+          const r=await fetcher('https://fred.stlouisfed.org/graph/fredgraph.csv?id='+def.id+'&cosd='+since,{signal:AbortSignal.timeout(7000)});
+          if(!r.ok)throw Error('HTTP_'+r.status);
+          text=await r.text();
+        }
+        if(text.length>1000000)throw Error('SERIE_DEMASIADO_GRANDE');
+        metrics[i]={...macroPoint(def,text,now),transport:apiKey?'API_FRED_AUTENTICADA':'CSV_FRED_PUBLICO'};
       } catch(e) {
         const old=prior?.metrics?.find(x=>x.id===def.id&&n(x.value)!==null);
-        metrics[i]=old?{...old,status:'STALE',error:e.message}:{...def,value:null,asof:null,status:'UNKNOWN',error:e.message};
+        metrics[i]=old?{...old,status:'STALE',error:safeMacroError(e)}:{...def,value:null,asof:null,status:'UNKNOWN',error:safeMacroError(e)};
       }
     }
   }));
@@ -127,7 +140,7 @@ async function readMacro(bucket,fetcher,now,{preferMirror=true}={}) {
       for(let i=0;i<metrics.length;i++)if(metrics[i].error&&mirror[i].value!==null&&(!metrics[i].asof||mirror[i].asof>metrics[i].asof||mirror[i].asof===metrics[i].asof&&mirror[i].received>metrics[i].received))metrics[i]=mirror[i];
     }
   }catch{}
-  const value={metrics,accountData:false,checkedAt:now,nextCheck:now+(metrics.some(x=>x.error)?300000:900000)};
+  const value={metrics,accountData:false,transport:apiKey?'API_FRED_AUTENTICADA':'CSV_FRED_PUBLICO',checkedAt:now,nextCheck:now+(metrics.some(x=>x.error)?300000:900000)};
   if(bucket) await bucket.put('providers/macro-v1.json',JSON.stringify(value),{httpMetadata:{contentType:'application/json'}});
   return ageMacro(value,now);
 }

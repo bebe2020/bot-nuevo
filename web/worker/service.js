@@ -1,3 +1,4 @@
+import {analyticsFetch,connectorStatus} from './connectors.js';
 import {fundamentalsProvider} from './fundamentals.js';
 import {readPaper,savePaper} from './paper-cloud.js';
 import {macroProvider} from './macro.js';
@@ -72,13 +73,14 @@ export default {async fetch(request,env){
  const url=new URL(request.url);try{
   if(url.pathname==='/'&&request.method==='GET')return new Response(HTML,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.bitget.com wss://ws.bitget.com; img-src 'self' data:; frame-ancestors 'self' https://chatgpt.com https://*.chatgpt.com; object-src 'none'; base-uri 'self'",'X-Content-Type-Options':'nosniff'}});
   if(request.method==='GET'&&typeof PUBLIC_ASSETS==='object'&&PUBLIC_ASSETS[url.pathname]){const a=PUBLIC_ASSETS[url.pathname];return new Response(a.body,{headers:{'Content-Type':a.type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
+  if(url.pathname==='/api/connectors'&&request.method==='GET')return json(await connectorStatus(env));
   if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:PROTOCOL_VERSION,admissionRevision:'20261111-fresh-flow',fundamentalSeries:20,build:typeof BUILD_INFO==='object'?BUILD_INFO:null,featureSet:'terminal-integrada-20261112',macroSeries:20,fundamentalMetricsPerAsset:14,labModules:5,liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
   if(url.pathname==='/api/cloud'){const {raw,...status}=await cloudFeed();return json(status);}
   if(url.pathname==='/api/sosovalue'&&request.method==='GET')return json(await sosoProvider(env.BUCKET,env.SOSOVALUE_API_KEY));
-  if(url.pathname==='/api/fundamentals'&&request.method==='GET')return json(await fundamentalsProvider(env.BUCKET));
-  if(url.pathname==='/api/macro'&&request.method==='GET')return json(await macroProvider(env.BUCKET));
+  if(url.pathname==='/api/fundamentals'&&request.method==='GET')return json(await fundamentalsProvider(env.BUCKET,analyticsFetch(env)));
+  if(url.pathname==='/api/macro'&&request.method==='GET')return json(await macroProvider(env.BUCKET,fetch,Date.now(),{apiKey:env.FRED_API_KEY,preferMirror:!env.FRED_API_KEY}));
   if(url.pathname==='/api/context'&&request.method==='GET')return json(await publicContext(env.BUCKET));
-  if(url.pathname==='/api/providers'&&request.method==='GET')return json(await globalProviders(env.BUCKET));
+  if(url.pathname==='/api/providers'&&request.method==='GET')return json(await globalProviders(env.BUCKET,analyticsFetch(env)));
   if(url.pathname==='/api/cross-assets'&&request.method==='GET')return json(await crossAssetProviders(env.BUCKET));
   if(url.pathname==='/api/onchain'&&request.method==='GET')return json(await onchainProvider(env.BUCKET,url.searchParams.get('symbol')||'BTCUSDT'));
   if(url.pathname==='/api/watch-public'&&request.method==='GET')return json(await publicWatchHistory());

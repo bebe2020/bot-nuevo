@@ -1,5 +1,6 @@
+import {RefreshCoordinator} from '/refresh.js';
 import {n,FRAMES} from '/engine.js';
-import {PROTOCOLS,evaluateIdea,refreshEvaluation} from '/protocol.js';
+import {PROTOCOLS,evaluateIdea,refreshEvaluation,protocolReadiness} from '/protocol.js';
 import {INDICATOR_CATALOG} from '/technicals.js';
 import {unifiedRow,returnTone,quoteMetric} from '/market-contract.js';
 import {automaticSizing,watchObservation} from '/auto-protocol.js';
@@ -9,12 +10,12 @@ import {ageFundamentals,ageCryptoGlobal} from '/fundamental-facts.js';
 import {integralConfluence} from '/integral.js';
 const dp=id=>document.getElementById(id),de=x=>String(x??'N/D').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),df=(x,d=7)=>n(x)===null?'N/D':new Intl.NumberFormat('es-AR',{maximumSignificantDigits:d}).format(Number(x)),dt=x=>n(x)===null?'N/D':new Date(Number(x)).toLocaleString('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hour12:false}),dc=x=>n(x)===null?'N/D':(x>0?'+':'')+df(x*100,4)+' %',dr=(a,b,cls='')=>'<div class="row"><span>'+de(a)+'</span><span class="'+cls+'">'+de(b)+'</span></div>';
 export class DashboardPanels{
- constructor(options){Object.assign(this,options);this.providers=null;this.cross=null;this.chain=null;this.forecast=null;this.lab='robot';this.lastGlobal=0;this.lastCross=0;this.providerBusy=false;this.currentIdeas=new Map();this.correlations=[];
+ constructor(options){Object.assign(this,options);this.cycle=new RefreshCoordinator({onChange:()=>this.renderCoordination()});this.providers=null;this.cross=null;this.chain=null;this.forecast=null;this.lab='robot';this.lastGlobal=0;this.lastCross=0;this.providerBusy=false;this.currentIdeas=new Map();this.correlations=[];
   const goto=id=>{if(id==='kronos')this.setLab('kronos');this.openView({price:'discovery',structure:'terminal',flow:'terminal',defi:'defi',onchain:'onchain',macro:'rotation',kronos:'lab',risk:'protocolo',history:'diario'}[id]||'terminal');};
   this.scenes={robot:new WireScene(dp('robotScene'),{mode:'brain',onSelect:goto}),octopus:new WireScene(dp('octopusScene'),{mode:'octopus',onSelect:goto}),team:new WireScene(dp('teamScene'),{mode:'brain',onSelect:goto})};
   document.querySelectorAll('[data-lab]').forEach(b=>b.onclick=()=>this.setLab(b.dataset.lab));
   dp('explodeOctopus').onchange=e=>this.scenes.octopus.setExploded(e.target.checked);dp('rotateOctopus').onchange=e=>{this.scenes.octopus.rotate(e.target.checked);this.scenes.octopus.paint();};
-  dp('readOnchain').onclick=()=>this.readOnchain();dp('readKronos').onclick=()=>this.readKronos();
+  dp('readOnchain').onclick=()=>this.readOnchain(this.getSymbol(),true);dp('readKronos').onclick=()=>this.readKronos(true);
   dp('defiRankingMode').onchange=()=>this.renderDeFi();dp('defiSearch').oninput=()=>this.renderDeFi();
   let budget={};try{budget=JSON.parse(localStorage.getItem('terminal54-sizing')||'{}');}catch{}
   for(const [id,key]of [['autoRiskUSD','riskUSD'],['autoFeePct','feePct'],['autoLeverage','leverage']]){dp(id).value=budget[key]??'';dp(id).onchange=()=>{try{localStorage.setItem('terminal54-sizing',JSON.stringify(this.budget()));}catch{}this.renderAutomatic();};}
@@ -34,26 +35,24 @@ export class DashboardPanels{
  }
  setLab(name){this.lab=name;document.querySelectorAll('[data-lab-panel]').forEach(p=>p.hidden=p.dataset.labPanel!==name);document.querySelectorAll('[data-lab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.lab===name)));Object.entries(this.scenes).forEach(([id,scene])=>scene.setActive(id===name));if(name==='kronos')this.readKronos();this.renderLab();}
  onView(view){if(['fundamentos','protocolo','oceano'].includes(view))this.refreshFundamentals();Object.entries(this.scenes).forEach(([id,scene])=>scene.setActive(view==='lab'&&id===this.lab));if(view==='oceano')this.refreshSoso();if(['defi','onchain','hyper','rotation','lab'].includes(view))this.refresh();if(view==='rotation')this.refreshCross();if(view==='anticipadas')this.readWatchHistory();if(view==='onchain')this.readOnchain();if(view==='lab')this.readKronos();this.render();}
- async refresh(){if(this.providerBusy||Date.now()-this.lastGlobal<300000)return;this.providerBusy=true;try{this.providers=await this.tasks.run('defi','DeFi / identidades / Hyperliquid',()=>this.api('/api/providers'),'HTTP_PUBLICO');this.lastGlobal=Date.now();this.renderDeFi();this.renderHyper();this.renderChainTable();this.renderRotation();this.renderLab();}catch(e){dp('defiTime').textContent=e.message;}finally{this.providerBusy=false;}}
- async refreshSoso(){if(this.sosoBusy||Date.now()-(this.lastSoso||0)<60000)return;this.sosoBusy=true;try{this.soso=await this.tasks.run('sosovalue','Fundamentos SoSoValue',()=>this.api('/api/sosovalue'),'SOSOVALUE_API');this.lastSoso=Date.now();this.renderSoso();}catch(e){dp('sosoTime').textContent=e.message;}finally{this.sosoBusy=false;}}
+ async request(id,label,path,apply,ttl=300000,force=false){
+  try{const value=await this.cycle.run(id,()=>this.tasks.run(id,label,()=>this.api(path),'HTTP_SERVIDOR'),{ttl,force});if(value)apply(value);return value;}
+  catch(e){this.renderCoordination();return null;}
+ }
+ async refresh(force=false){return this.request('defi','DeFi / Hyperliquid','/api/providers',value=>{this.providers=value;this.renderDeFi();this.renderHyper();this.renderChainTable();this.renderOcean();this.renderIntegral();},300000,force);}
+ async refreshSoso(force=false){return this.request('sosovalue','SoSoValue · 20 series','/api/sosovalue',value=>{this.soso=value;this.renderSoso();this.renderOcean();},1800000,force);}
+ async refreshConnectors(force=false){return this.request('connectors','Verificar acceso a proveedores','/api/connectors',value=>{this.connectors=value;this.renderCoordination();},1800000,force);}
+ async refreshAll(force=false){return Promise.allSettled([this.refreshMacro(force),this.refreshCross(force),this.refresh(force),this.refreshFundamentals(force),this.refreshSoso(force),this.refreshConnectors(force),this.readKronos(force)]);}
+ renderCoordination(){
+  if(!dp('moduleStatus'))return;
+  const jobs=this.cycle.snapshot(),running=jobs.filter(x=>x.inFlight).length,errors=jobs.filter(x=>['ERROR','AUTH_REQUIRED','CONFIG_REQUIRED','UNREACHABLE','RATE_LIMITED'].includes(x.state)).length;
+  dp('moduleStatus').textContent=running?'Actualizando '+running+' fuentes · los controles siguen disponibles':errors?errors+' consultas pendientes de reintento automático':'Fuentes coordinadas · actualización automática activa';
+  dp('moduleConnections').innerHTML=jobs.map(x=>dr(x.id,x.state+' · '+(x.lastSuccess?dt(x.lastSuccess):'sin respuesta'))).join('')+(this.connectors?.providers||[]).map(x=>dr(x.id+' · acceso',x.status,x.status==='OK'?'good':'warn')).join('');
+ }
  renderSoso(){const value=this.soso;if(!value)return;dp('sosoTime').textContent=({CONFIG_REQUIRED:'Configurar acceso',AUTH_REQUIRED:'Acceso pendiente',RATE_LIMITED:'Límite temporal',COLLECTING:'Consultando',PARTIAL:'Cobertura parcial',UNKNOWN:'Sin datos',STALE:'Datos vencidos',OK:'Disponible'}[value.status]||value.status)+' · '+dt(value.servedAt||value.checkedAt);dp('sosoSummary').innerHTML=dr('Series vigentes',value.coverage.observed+' / '+value.coverage.selected)+dr('Series vencidas',value.coverage.stale)+(value.message?'<p class="warn">'+de(value.message)+'</p>':'')+(value.setupURL?'<a href="'+de(value.setupURL)+'" target="_blank" rel="noopener">Configurar acceso en SoSoValue ↗</a>':'')+'<p class="quiet">'+de(value.note)+'</p>';dp('sosoMetrics').innerHTML=value.metrics.map(x=>'<article class="cross-card"><h3>'+de(x.label)+'</h3><strong>'+df(x.value)+' '+de(x.unit)+'</strong><small>'+de(x.status)+' · dato '+dt(x.asof)+'</small><small>Diferencia entre observaciones: '+df(x.change)+'</small><a href="https://sosovalue.com" target="_blank" rel="noopener">SoSoValue ↗</a></article>').join('');}
- async refreshCross(){if(this.crossBusy||Date.now()-this.lastCross<900000)return;this.crossBusy=true;try{this.cross=await this.tasks.run('macro','Oro / bonos / dólar / liquidez',()=>this.api('/api/cross-assets'),'HTTP_PUBLICO');this.lastCross=Date.now();this.renderRotation();}catch(e){dp('crossAssets').textContent=e.message;}finally{this.crossBusy=false;}}
- async refreshMacro(){
-  if(this.macroBusy||Date.now()-(this.lastMacro||0)<900000)return;
-  this.macroBusy=true;
-  try{this.macro=await this.tasks.run('macro-series','20 series FRED',()=>this.api('/api/macro'),'FRED_PUBLICO');this.lastMacro=Date.now();this.renderMacro();}
-  catch(e){dp('macroCoverage').textContent='No se pudo consultar: '+e.message;}
-  finally{this.macroBusy=false;}
- }
- async refreshFundamentals(){
-  if(this.fundamentalsBusy||Date.now()<(this.nextFundamentalsCheck||0))return;
-  this.fundamentalsBusy=true;
-  try{
-   this.fundamentals=await this.tasks.run('fundamentals','Fundamentales y mercado cripto',()=>this.api('/api/fundamentals'),'DEFILLAMA_COINGECKO_PUBLICOS');
-   this.lastFundamentals=Date.now();this.nextFundamentalsCheck=Date.now()+300000;this.renderFundamentals();this.renderIntegral();this.renderMacro();
-  }catch(e){this.nextFundamentalsCheck=Date.now()+60000;dp('fundamentalCoverage').textContent='Consulta pendiente: '+e.message;}
-  finally{this.fundamentalsBusy=false;}
- }
+ async refreshCross(force=false){return this.request('macro','Oro / bonos / dólar','/api/cross-assets',value=>{this.cross=value;this.renderRotation();this.renderMacro();this.renderIntegral();this.renderOcean();},900000,force);}
+ async refreshMacro(force=false){return this.request('macro-series','20 series FRED','/api/macro',value=>{this.macro=value;this.renderMacro();this.renderIntegral();this.renderOcean();},900000,force);}
+ async refreshFundamentals(force=false){return this.request('fundamentals','Fundamentos 54','/api/fundamentals',value=>{this.fundamentals=value;this.renderFundamentals();this.renderIntegral();this.renderMacro();this.renderOcean();},300000,force);}
  renderFundamentals(){
   if(!this.fundamentals)return;
   const data=ageFundamentals(this.fundamentals),g=data.global;
@@ -78,20 +77,42 @@ export class DashboardPanels{
   dp('macroCoverage').textContent=m.coverage.observed+' / '+m.coverage.total+' vigentes · '+m.coverage.stale+' vencidas · consulta '+dt(m.checkedAt);
   dp('macroMetrics').innerHTML=m.metrics.map(x=>'<article class="cross-card"><small>'+de(x.frequency)+' · '+de(x.id)+'</small><h3>'+de(x.label)+'</h3><strong>'+df(x.value)+' '+de(x.unit)+'</strong>'+dr('Cambio entre observaciones',df(x.change))+ (x.yoy!==null&&x.yoy!==undefined?dr('Variación interanual',df(x.yoy,4)+' %'):'')+'<small>'+de(x.status)+' · '+de(x.date||'Sin observación')+'</small>'+(x.error?'<small>'+de(x.error)+'</small>':'')+'<a href="'+de(x.source)+'" target="_blank" rel="noopener">Fuente FRED ↗</a></article>').join('');
  }
+ renderOcean(){
+  if(!dp('oceanFacts'))return;
+  const now=Date.now(),m=this.macro,regime=capitalRegime(this.cross,now),fund=this.fundamentals?ageFundamentals(this.fundamentals,now):null,crypto=ageCryptoGlobal(fund?.global,now),rows=this.rows(),known=rows.filter(x=>x.displayFresh&&n(x.displayChange)!==null),up=known.filter(x=>x.displayChange>0).length;
+  const metric=id=>this.soso?.metrics?.find(x=>x.id===id),cards=[];
+  const card=(label,value,unit,status,asof)=>'<article class="cross-card"><h3>'+de(label)+'</h3><strong>'+df(value)+' '+de(unit)+'</strong><small>'+de(status||'PENDIENTE')+' · '+dt(asof)+'</small></article>';
+  dp('oceanConclusion').innerHTML='<h3 class="'+(regime.state==='RIESGO_DEFENSIVO'?'bad':regime.state==='RIESGO_FAVORABLE'?'good':'warn')+'">'+de(regime.state.replaceAll('_',' '))+'</h3><p>'+regime.observed+' / 4 referencias intermercado vigentes. '+up+' suben y '+(known.length-up)+' no suben entre '+known.length+' cotizaciones recientes del universo. '+(m?m.coverage.observed+' / 20 series FRED vigentes. ':'Macro en consulta. ')+(this.soso?this.soso.coverage.observed+' / 20 series SoSoValue vigentes.':'SoSoValue en consulta.')+'</p><small>La lectura intermercado compara 20 sesiones; la amplitud usa el período de cambio seleccionado. Los retornos no prueban desplazamiento neto de capital. Cada dato conserva su fecha.</small>';
+  cards.push(card('Liquidez USD · proxy Fed',m?.liquidityUSD?.value,'mil millones USD',m?.liquidityUSD?.status,m?.liquidityUSD?.asof).replace(dt(m?.liquidityUSD?.asof),de(m?.liquidityUSD?.date||'Sin fecha')));
+  cards.push(card('Dominancia BTC · CoinGecko',crypto?.btcDominancePct,'%',crypto?.status,crypto?.asof));
+  for(const id of ['fear','ahr','oi','stables','etfbtc','etfeth']){const x=metric(id);if(x)cards.push(card(x.label,x.value,x.unit,x.status,x.asof));}
+  dp('oceanFacts').innerHTML=cards.join('');
+  dp('oceanMarkets').innerHTML=(this.cross?.assets||[]).filter(x=>['GC=F','TLT','IEF','DX-Y.NYB','^GSPC','^NDX'].includes(x.id)).map(x=>card(x.label,x.price,x.kind==='FUTURO_ORO'?'USD/oz':x.kind?.startsWith('INDICE_')?'puntos':x.currency||'',x.status,x.asof).replace('</article>','<small>20 sesiones: '+dc(x.change20d)+'</small></article>')).join('')||'<p>Consultando precios de referencia…</p>';
+  dp('oceanMacroCoverage').textContent=m?m.coverage.observed+' / 20 vigentes · '+m.coverage.stale+' vencidas · consulta '+dt(m.checkedAt):'Consultando API FRED';
+  dp('oceanMacroMetrics').innerHTML=dp('macroMetrics').innerHTML;
+ }
  renderIntegral(){
   const rows=this.rows(),row=rows.find(x=>x.symbol===this.getSymbol()&&x.market===this.getMarket()),idea=row?this.ideaFor(row):null;
-  const value=integralConfluence({idea,evaluation:idea?.e,cross:this.cross,providers:this.providers,macro:this.macro,fundamentals:this.fundamentals,symbol:this.getSymbol()});
-  dp('integralProtocol').innerHTML='<h3>Macro → estructura → flujo → fundamentos</h3>'+Object.entries(value.keys).map(([id,x])=>'<div class="key"><strong class="'+(x.state==='PASS'?'good':x.state==='CONFLICT'?'bad':'warn')+'">'+id+' · '+de(x.label)+' · '+de(x.state)+'</strong><small>'+de(x.reason)+'</small>'+(x.observations?dr('Capitalización / FDV / TVL USD',[x.observations.marketCap,x.observations.fdv,x.observations.tvl].map(v=>df(v)).join(' / '))+dr('Dato mercado / recepción TVL',dt(x.observations.marketAsOf)+' / '+dt(x.observations.tvlReceived)):'')+'</div>').join('')+'<p class="quiet">'+de(value.note)+'</p>';
+  const snapshot=this.getSnapshot(),quote=this.getQuote(this.getSymbol(),this.getMarket()),evaluation=idea?.e||(snapshot?.structures?protocolReadiness({...snapshot,currentPrice:quote&&Date.now()-quote.ts<5000?quote.price:null,currentPriceAsOf:quote?.ts},this.getHorizon(),this.getProfile()):null);
+  const value=integralConfluence({idea,evaluation,cross:this.cross,providers:this.providers,macro:this.macro,fundamentals:this.fundamentals,symbol:this.getSymbol()});
+  const html='<h3>'+de(this.getSymbol()+' · '+this.getMarket()+' · '+PROTOCOLS[this.getHorizon()].label)+'</h3><h3>Macro → estructura → flujo → fundamentos</h3>'+Object.entries(value.keys).map(([id,x])=>'<div class="key"><strong class="'+(x.state==='PASS'?'good':x.state==='CONFLICT'?'bad':'warn')+'">'+id+' · '+de(x.label)+' · '+de(x.state)+'</strong><small>'+de(x.reason)+'</small>'+(x.observations?dr('Capitalización / FDV / TVL USD',[x.observations.marketCap,x.observations.fdv,x.observations.tvl].map(v=>df(v)).join(' / '))+dr('Dato mercado / recepción TVL',dt(x.observations.marketAsOf)+' / '+dt(x.observations.tvlReceived)):'')+'</div>').join('')+'<p class="quiet">'+de(value.note)+'</p>';
+  dp('integralProtocol').innerHTML=html;if(dp('oceanAssetKeys'))dp('oceanAssetKeys').innerHTML=html;
  }
- async readOnchain(symbol=this.getSymbol()){
-  if(this.chainBusy===symbol)return;this.chainBusy=symbol;dp('onchainSelected').textContent='Leyendo contratos y red de '+symbol+'…';
-  try{const chain=await this.tasks.run('onchain','Identidad y datos on-chain',()=>this.api('/api/onchain?symbol='+encodeURIComponent(symbol)),'RPC_O_INDEXADOR_PUBLICO');if(symbol!==this.getSymbol())return;this.chain=chain;this.renderOnchain();}catch(e){if(symbol===this.getSymbol())dp('onchainSelected').innerHTML='<p class="warn">'+de(e.message)+'</p>';}
-  finally{if(this.chainBusy===symbol)this.chainBusy=null;}
+ async readOnchain(symbol=this.getSymbol(),force=false){
+  return this.request('onchain:'+symbol,'On-chain · '+symbol,'/api/onchain?symbol='+encodeURIComponent(symbol),value=>{if(symbol!==this.getSymbol())return;this.chain=value;this.renderOnchain();},1800000,force);
  }
- async readKronos(){const symbol=this.getSymbol(),market=this.getMarket(),key=symbol+':'+market;if(this.forecastBusy===key)return;if(this.forecast?.symbol===symbol&&this.forecast.market===market&&Date.now()-(this.forecastReadAt||0)<300000)return;this.forecastBusy=key;
-  try{const result=await this.tasks.run('kronos','Consultar inferencia Kronos-mini',()=>this.api('/api/kronos?symbol='+symbol+'&market='+market),'KRONOS_MINI_PYTORCH');if(symbol!==this.getSymbol()||market!==this.getMarket())return;this.forecast=result;this.forecastReadAt=Date.now();this.renderKronos();this.renderLab();}catch(e){dp('kronosFacts').textContent=e.message;}finally{this.forecastBusy=null;}
+ async readKronos(force=false){
+  const symbol=this.getSymbol(),market=this.getMarket();
+  return this.request('kronos:'+symbol+':'+market,'Kronos · '+symbol,'/api/kronos?symbol='+symbol+'&market='+market,value=>{if(symbol!==this.getSymbol()||market!==this.getMarket())return;this.forecast=value;this.forecastReadAt=Date.now();this.renderKronos();},300000,force);
  }
- render(){this.renderAutomatic();this.renderIntegral();this.renderMacro();this.refreshMacro();this.refreshFundamentals();this.renderWatch();this.renderAccumulation();this.renderPaper();const view=this.getView();if(view==='fundamentos')this.renderFundamentals();if(view==='defi')this.renderDeFi();if(view==='hyper')this.renderHyper();if(view==='onchain'){this.renderChainTable();this.renderOnchain();}if(view==='rotation')this.renderRotation();if(view==='oceano')this.refreshSoso();if(view==='lab')this.renderLab();}
+ render(){
+  const view=this.getView();this.renderMacro();
+  if(['terminal','protocolo','oceano'].includes(view))this.renderIntegral();
+  if(view==='protocolo'){this.renderAutomatic();this.renderPaper();}
+  if(view==='terminal')this.renderAccumulation();if(view==='anticipadas')this.renderWatch();if(view==='diario')this.renderPaper();
+  if(view==='fundamentos')this.renderFundamentals();if(view==='defi')this.renderDeFi();if(view==='hyper')this.renderHyper();
+  if(view==='onchain'){this.renderChainTable();this.renderOnchain();}if(view==='rotation')this.renderRotation();if(view==='oceano')this.renderOcean();if(view==='lab')this.renderLab();
+ }
  ideaFor(row){const s=this.getSnapshot(),horizon=this.getHorizon(),profile=this.getProfile(),tf=PROTOCOLS[horizon].frames[0],maxAge=(FRAMES[tf]||86400000)*4,now=Date.now();
   const candidates=(s?.opportunities||[]).filter(x=>x.symbol===row.symbol&&x.market===row.market&&x.horizon===horizon&&now-x.formed<=maxAge);
   return candidates.map(x=>{const q=this.getQuote(x.symbol,x.market);let e=x.evaluations?.[profile];if(e)e=refreshEvaluation(e,x,now,q&&now-q.ts<5000?{price:q.price,asof:q.ts}:null);if(s.symbol===x.symbol&&s.market===x.market)e=evaluateIdea({...s,currentPrice:q&&now-q.ts<5000?q.price:null,currentPriceAsOf:q?.ts},x,profile,now);if((!q||now-q.ts>=5000||now-q.received>=5000)&&e?.admission==='CONFIRMADA')e={...e,admission:'ESPERA_PRECIO_FRESCO'};if(q&&now-q.ts<5000&&(x.side==='LONG'?q.price<=x.stop:q.price>=x.stop))e={...e,admission:'INVALIDADA',phase:'INVALIDADA'};if(this.isInvalidated?.(x))e={...e,phase:'INVALIDADA',admission:'INVALIDADA'};return {...x,e};}).filter(x=>x.e&&!['INVALIDADA','CADUCADA'].includes(x.e.phase)).sort((a,b)=>(b.e.admission==='CONFIRMADA')-(a.e.admission==='CONFIRMADA'))[0]||null;
@@ -143,7 +164,7 @@ export class DashboardPanels{
   dp('agentEvents').innerHTML=state.events.map(x=>'<div><time>'+dt(x.at)+'</time><strong>'+de(x.id+' · '+x.state)+'</strong><span>'+de(x.message)+'</span></div>').join('');
   const tasks=state.tasks,nodes=tasks.map(t=>({id:t.id,label:t.label.slice(0,20),state:t.state}));this.scenes?.team.setNodes(nodes);
  }
- renderLab(){if(this.forecast&&this.forecast.validUntil<Date.now())this.forecast.status='STALE';if(this.getView()==='lab'&&this.lab==='kronos'){this.renderKronos();this.readKronos();}const s=this.getSnapshot(),rows=this.rows(),data=this.providers?.defi,h=this.providers?.hyper;
+ renderLab(){if(this.forecast&&this.forecast.validUntil<Date.now())this.forecast.status='STALE';if(this.getView()==='lab'&&this.lab==='kronos'){this.renderKronos();}const s=this.getSnapshot(),rows=this.rows(),data=this.providers?.defi,h=this.providers?.hyper;
   const nodes=[{id:'price',label:'PRECIOS · '+rows.filter(x=>x.displayFresh).length,state:rows.some(x=>x.displayFresh)?'OK':'UNKNOWN'},{id:'structure',label:'ESTRUCTURA',state:s?'OK':'UNKNOWN'},{id:'flow',label:'VOLUMEN / DOM',state:s?.book?.status||'UNKNOWN'},{id:'defi',label:'DEFI',state:data?.status||'UNKNOWN'},{id:'onchain',label:'ON-CHAIN',state:this.chain?.status||'UNKNOWN'},{id:'macro',label:'MACRO',state:this.cross?.status||'UNKNOWN'},{id:'kronos',label:'KRONOS',state:this.forecast?.status||'UNKNOWN'},{id:'risk',label:'PROTOCOLO',state:s?'OK':'UNKNOWN'}];
   this.scenes.robot.setNodes(nodes);this.scenes.octopus.setNodes(nodes);
   dp('robotFacts').innerHTML=dr('Universo',rows.length+' monedas únicas')+dr('Precios actuales',rows.filter(x=>x.displayFresh).length+' con cotización <5 s')+dr('DeFiLlama',data?.ranking?data.ranking.length+' protocolos en ranking':'Consultando')+dr('Hyperliquid',h?.rows?h.rows.filter(x=>x.available).length+' instrumentos verificados':'Consultando')+dr('IA ejecutada',this.forecast?.model||'Consultar Kronos')+'<p class="quiet">Los motores de reglas no se presentan como llamadas a Claude, GPT ni otros modelos. Kronos identifica su modelo e inferencia.</p>';

@@ -13,7 +13,7 @@ export function planUUID(random = crypto) {
 }
 
 export async function siteAPI(path, options = {}, fetcher = fetch) {
-  const response = await fetcher(path, { ...options, credentials: 'include', cache: 'no-store' });
+  const response = await fetcher(path, { ...options, signal:options.signal??AbortSignal.timeout(90000), credentials: 'include', cache: 'no-store' });
   if (!response.ok) {
     let message = response.status === 401 ? 'La sesión del sitio venció' : 'HTTP ' + response.status;
     if (response.status !== 401) {
