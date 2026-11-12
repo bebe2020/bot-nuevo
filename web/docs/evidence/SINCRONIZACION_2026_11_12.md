@@ -1,10 +1,10 @@
-# Entrega 18 · sincronización y ejecución de fondo
+# Entrega 19 · sincronización y ejecución de fondo
 
 Proyecto personal: bebe2020/bot-nuevo. SNIPER comercial no se modificó.
 
 Cambios, causas y límites: [Reparación de sincronización](../REPARACION_SINCRONIZACION_2026_11_12.md). Procedimiento ejecutable: [Automatización](../AUTOMATIZACION.md).
 
-## Publicación comprobada
+## Publicación intermedia comprobada
 
 - Sitio privado https://bot-nuevo-liquidez.stablepiece.chatgpt.site, versión 18.
 - Fuente nativa: 03c960d323b270722ee33ae3609efa01879af2eb.
@@ -44,3 +44,19 @@ La tarea comprueba frescura, relanza los jobs collect/infer si están vencidos y
 192 pruebas Node aprobadas, build y validación correctos. Chrome 360px: cambio de activo/mercado, perfil y horizonte compartidos; invalidación de respuestas on-chain anteriores; cuatro vistas de análisis sin pulpo; consultas on-chain/Kronos incluidas en actualizar todo.
 
 No se presenta esa suite como prueba de que todo el bot esté terminado. Permanecen incompletos K4, M2 mundial agregado, cobertura on-chain por red y validación fuera de muestra. CoinGlass sigue rechazando la clave. No hay lectura de cuentas ni ejecución real de órdenes. La cobertura física en Samsung no está certificada.
+
+## Cierre adicional: versión 19
+
+Una nueva comprobación detectó que iniciar otro barrido podía reemplazar velas de otras monedas por PENDIENTE antes de volver a consultarlas. Ahora se conservan únicamente las series no consultadas de la misma identidad/mercado. Se respetan errores nuevos y fechas originales. Al terminar la adquisición, sus resultados reemplazan esa conservación temporal.
+
+- Fuente nativa final: 1162730ce8996e9c6c7d7b74e06b98a808fdbd76.
+- Versión 19, despliegue appgdep_6af60089f4208191bbd29b7d3a6d32c0: succeeded, 12/11/2026 18:08:27 UTC. Secretos revisión 1.
+- /api/health confirmó huella 554a4f783300ec6c401fe2e69a5743a91b6c0d6a281ccc0ba909b6c87c801652 y cuatro módulos.
+- 195/195 pruebas locales, build y validación correctos; tres casos nuevos cubren conservación parcial, errores reales y aislamiento de mercados.
+- Chrome móvil: precio de cabecera y fila ETH coincidentes (2.016,93 en la lectura), selección ETH/PERP/MODERADO/SEMANAL igual en ambas vistas, botón de refresco habilitado tras completar y error de aplicación vacío. Ancho de documento y contenido iguales; tablas con su propio desplazamiento.
+- La CI de GitHub del commit 602cdef33d093271a98a263c1b1e61620549dfc9 terminó correctamente (run 43275825188). El nuevo commit conserva el código final de versión 19; su CI debe verificarse después de guardarlo.
+- Captura run 43275825325: success. Lectura posterior /api/cloud: OK, lastSuccess=1794506666844 (12/11/2026 18:04:26 UTC).
+- Inferencia run 43263035337: success. Lectura posterior de Kronos ETH: generatedAt=1794506559161, 54/54 resultados válidos y antigüedad de 6 minutos al comprobar.
+- GET /api/background-status conserva exactamente el resultado escrito a las 18:01 UTC. El respaldo horario sigue habilitado y enlazado al sitio. Todavía no se observó su primera ejecución programada.
+
+El escritor no cambió entre las versiones 18 y 19; se conserva su comprobación de escritura real y lectura posterior. Los faltantes enumerados arriba siguen abiertos.

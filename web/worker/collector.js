@@ -48,6 +48,17 @@ function rowSummary(r,t,now,market){const b=validFrame(r.bars,'15m',now),v=volum
 import {volume} from './engine.js';
 import {rsiSeries,volumeProfile} from './indicators.js';
 const enrichRSI=b=>rsiSeries(b.map(r=>r[4])).at(-1),volumeSafe=b=>volume(b).value;
+// Pending means not queried yet; a provider failure must remain a failure.
+export function retainPendingAcquisition(current,previous){
+ if(!previous||current.version!==previous.version||current.market!==previous.market)return current;
+ const rows=(items,oldItems)=>items?.map(row=>{
+  const old=oldItems?.find(x=>x.symbol===row.symbol);if(!row.available||!old?.available)return row;
+  if(row.bars){const missing=Object.keys(old.frames||{}).filter(tf=>!Object.hasOwn(row.frames||{},tf)),keepBars=row.bars.error==='PENDIENTE'&&old.bars?.ok;if(keepBars||missing.length)return {...row,...(keepBars?{bars:old.bars}:{}),frames:{...old.frames,...row.frames},retainedBars:true};}
+  if(row.monthly?.error==='PENDIENTE'&&old.monthly?.ok)return {...row,monthly:old.monthly,...(!row.bars&&old.bars?.ok?{bars:old.bars,frames:old.frames}:{}),retainedBars:true};
+  return row;
+ });
+ return {...current,rows:rows(current.rows,previous.rows),otherMarket:current.otherMarket?{...current.otherMarket,rows:rows(current.otherMarket.rows,current.otherMarket.market===previous.otherMarket?.market?previous.otherMarket.rows:[])}:current.otherMarket};
+}
 export function assemble(raw,previous=null){const now=raw.received,market=raw.market||'PERP',tickers=raw.tickers?.ok?raw.tickers.data:[],selected=raw.selectedTicker?.ok?raw.selectedTicker.data.find(x=>x.symbol===raw.symbol):null,ticker=selected||tickers.find(x=>x.symbol===raw.symbol)||{},row=raw.rows.find(x=>x.symbol===raw.symbol)||blankRow(raw.symbol),ss={},bars={},errors=[];
  for(const tf of Object.keys(FRAMES)){const f=validFrame(tf==='15m'?row.bars:raw.detail?.[tf],tf,now);bars[tf]=f.bars;ss[tf]=f.status==='OK'?structures(f.bars,tf):fact(null,f.status,f.reason);if(f.status!=='OK')errors.push(tf+': '+f.reason);}
  const quarters=quarterBars(bars['1Mutc']);bars['3M']=quarters;ss['3M']=structures(quarters,'3M');const ob=row.book?.ok?bookFacts({...row.book.data,timestamp:row.book.data.ts},now):fact(null,'UNKNOWN',row.book?.error),profiles=Object.fromEntries(Object.keys(POLICIES).map(p=>[p,profileFacts(bars['15m'],ob,ticker,p,ss)]));

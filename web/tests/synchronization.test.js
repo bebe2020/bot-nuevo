@@ -69,3 +69,17 @@ test('Precio, retornos y descuento se recalculan sobre las mismas referencias si
 test('Vigilancia conserva el precio más nuevo y no lee un régimen vencido como contexto actual',()=>{
  const r=row(110);r.frames={'15m':{status:'STALE',regime:'SHORT'}};const result=watchObservation(r,quote(90,now-2000),now);assert.equal(result.price,110);assert.equal(result.asof,r.sourceAsOf);assert.equal(result.phase,'OBSERVACION');
 });
+
+test('Un barrido parcial conserva velas pendientes con fecha intacta y sin mutar capturas',async()=>{
+ const {retainPendingAcquisition}=await import('../worker/collector.js');
+ const previous={version:'terminal-2.0',market:'PERP',rows:[{symbol:'ETHUSDT',available:true,bars:{ok:true,data:[[123,1,2,1,2,3]]},frames:{'4H':{ok:true,data:[[456,1,2,1,2,3]]}}}]},current={version:'terminal-2.0',market:'PERP',received:now,rows:[{symbol:'ETHUSDT',available:true,bars:{ok:false,error:'PENDIENTE'},frames:{}}]};
+ const result=retainPendingAcquisition(current,previous);assert.equal(result.rows[0].bars.data[0][0],123);assert.equal(result.rows[0].frames['4H'].data[0][0],456);assert.equal(result.rows[0].retainedBars,true);assert.equal(current.rows[0].bars.ok,false);assert.equal(result.received,now);
+});
+test('Una respuesta de error y un mercado diferente no heredan velas positivas',async()=>{
+ const {retainPendingAcquisition}=await import('../worker/collector.js'),previous={version:'terminal-2.0',market:'SPOT',rows:[{symbol:'ETHUSDT',available:true,bars:{ok:true,data:[[123,1,2,1,2,3]]}}]},current={version:'terminal-2.0',market:'PERP',rows:[{symbol:'ETHUSDT',available:true,bars:{ok:false,error:'PENDIENTE'},frames:{}}]};
+ assert.equal(retainPendingAcquisition(current,previous),current);current.market='SPOT';current.rows[0].bars.error='HTTP_429';assert.equal(retainPendingAcquisition(current,previous).rows[0].bars.error,'HTTP_429');assert.equal(retainPendingAcquisition(current,previous).rows[0].retainedBars,undefined);
+});
+
+test('Una temporalidad parcial conserva las no consultadas y respeta el error de la consultada',async()=>{
+ const {retainPendingAcquisition}=await import('../worker/collector.js'),bar={ok:true,data:[[now-3600000,1,2,1,2,3]]},previous={version:'terminal-2.0',market:'PERP',rows:[{symbol:'ETHUSDT',available:true,bars:bar,frames:{'1m':bar,'4H':bar}}]},current={version:'terminal-2.0',market:'PERP',rows:[{symbol:'ETHUSDT',available:true,bars:bar,frames:{'1m':{ok:false,error:'HTTP_429'}}}]},result=retainPendingAcquisition(current,previous);assert.equal(result.rows[0].frames['1m'].ok,false);assert.equal(result.rows[0].frames['4H'].data[0][0],now-3600000);
+});

@@ -16,9 +16,11 @@ Repositorio: `bebe2020/bot-nuevo`. Sitio: Bot Nuevo · Radar de liquidez. El rep
 | Una respuesta UNKNOWN acreditaba éxito | Se distingue última respuesta de último éxito de datos. |
 | Se daba por ejecutado un cron por estar escrito | Estado persistente de ejecución, fuente y cobertura; nueva ruta de actualización en segundo plano y procedimiento horario de respaldo. Programar no acredita ejecución futura. |
 
+| El inicio de un barrido parcial sustituía velas de otras monedas por pendientes | Se conservan únicamente las series aún no consultadas, con sus fechas originales; errores reales y mercados distintos no heredan datos positivos. |
+
 ## Evidencia
 
-- Suite Node: 192 pruebas aprobadas; incluye rechazo de cotizaciones anteriores, aislamiento SPOT/PERP, vencimiento de velas, selección compartida, recálculo de retornos y descuento, funding y escritura de fondo. Build y validación del Worker correctos.
+- Suite Node: 195 pruebas aprobadas; incluye rechazo de cotizaciones anteriores, aislamiento SPOT/PERP, vencimiento de velas, selección compartida, recálculo de retornos y descuento, funding y escritura de fondo. Build y validación del Worker correctos.
 - Chrome, viewport móvil de 360px: navegación durante adquisición; cambio CPOOL SPOT a BTC PERP y ETH PERP; perfil AGRESIVO y horizonte semanal compartidos; invalidación del on-chain anterior; Kronos correspondiente a la selección; controles de consulta por fuente. La previsualización local no contiene las claves privadas del servidor.
 - Se reejecutaron y completaron correctamente los jobs reales de captura e inferencia: `43226801945` intento 2 y `43174111809` intento 2. La lectura posterior de la rama `market-data` confirmó una captura nueva y 54 resultados de Kronos, calculados alrededor de las 14:48 UTC del 12/11/2026.
 - La prueba del botón de actualización incluye on-chain y Kronos, además de macro, mercados, DeFi, fundamentos y conectores. La cobertura parcial se mantiene visible.
