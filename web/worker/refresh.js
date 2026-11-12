@@ -10,7 +10,7 @@ export class RefreshCoordinator{
   job.state='QUEUED';this.onChange();
   job.promise=(async()=>{
    await this.slot();job.state='RUNNING';job.startedAt=this.clock();this.onChange();
-   try{const value=await load();job.value=value;job.state=value?.status||'OK';job.lastSuccess=this.clock();job.nextCheck=this.clock()+ttl;job.error=null;return value;}
+   try{const value=await load();job.value=value;job.state=value?.status||'OK';job.lastResponseAt=this.clock();if(['OK','PARTIAL'].includes(job.state))job.lastSuccess=this.clock();job.nextCheck=this.clock()+ttl;job.error=null;return value;}
    catch(e){job.state='ERROR';job.error=e?.status===401?'SESION_VENCIDA':'CONSULTA_NO_DISPONIBLE';job.nextCheck=this.clock()+30000;throw e;}
    finally{job.runs++;job.finishedAt=this.clock();job.promise=null;this.release();this.onChange();}
   })();

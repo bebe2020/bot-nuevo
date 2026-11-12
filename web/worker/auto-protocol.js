@@ -1,10 +1,10 @@
 import {n} from './engine.js';
-import {quoteMetric} from './market-contract.js';
+import {quoteMetric,unifiedRow} from './market-contract.js';
 
 const sideSign=x=>x==='LONG'?1:x==='SHORT'?-1:x==='RANGE'?0:null;
 const autoMedian=values=>{const a=values.filter(Number.isFinite).sort((x,y)=>x-y);return a.length?(a.length%2?a[Math.floor(a.length/2)]:(a[a.length/2-1]+a[a.length/2])/2):null;};
 export function directionalReading(row,horizon,protocols,sectors,allRows){
- const p=protocols[horizon],frames=p.frames.map(tf=>({tf,...row.frames?.[tf]})),known=frames.map(x=>sideSign(x.regime)).filter(x=>x!==null),f=frames[0]||{};
+ const p=protocols[horizon],frames=p.frames.map(tf=>({tf,...row.frames?.[tf]})),known=frames.filter(x=>x.status==='OK').map(x=>sideSign(x.regime)).filter(x=>x!==null),f=frames[0]?.status==='OK'?frames[0]:{};
  const est=known.length?known.reduce((s,x)=>s+x,0):null;
  const momentum=[n(f.rsi)!==null?f.rsi>55?1:f.rsi<45?-1:0:null,n(f.macdHistogram)!==null?Math.sign(f.macdHistogram):null,n(f.rsiSlope)!==null?Math.sign(f.rsiSlope):null].filter(x=>x!==null);
  const mom=momentum.length?momentum.reduce((s,x)=>s+x,0):null;
@@ -18,8 +18,7 @@ export function directionalReading(row,horizon,protocols,sectors,allRows){
  return {side:total===null?'UNKNOWN':total>0?'LONG':total<0?'SHORT':'NEUTRAL',balance:total,observed:values.length,components,frames,status:values.length===4?'OK':'PARTIAL',method:'BALANCE_DESCRIPTIVO; NO_PROBABILIDAD; NO_VETO_GLOBAL'};
 }
 export function watchObservation(row,quote=null,now=Date.now()){
- const valid=quote?.market===row.market&&quote.symbol===row.symbol&&now-quote.ts<=5000&&now-quote.received<=5000&&quote.ts<=now+5000;
- const price=valid?quote.price:n(row.price),change=valid?quoteMetric(quote).value:n(row.change),high=n(row.high24h),low=n(row.low24h),f=row.frames?.['15m']||{},asof=valid?quote.ts:row.sourceAsOf;
+ const observed=unifiedRow(row,quote,'ROLLING_24H',now),price=n(observed.price),change=n(observed.change),high=n(observed.high24h),low=n(observed.low24h),f=row.frames?.['15m']?.status==='OK'?row.frames['15m']:{},asof=observed.sourceAsOf;
  if(!(price>0))return {symbol:row.symbol,market:row.market,status:'UNKNOWN',phase:'SIN_PRECIO',asof};
  const fromHigh=high>0?(price/high-1)*100:null,toLow=low>0?(price/low-1)*100:null;
  const strongDrop=change!==null&&change<=-.08||fromHigh!==null&&fromHigh<=-8,strongRise=change!==null&&change>=.08;

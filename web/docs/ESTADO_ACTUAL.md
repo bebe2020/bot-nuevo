@@ -1,17 +1,17 @@
 # Estado actual · bot personal
 
-Fuente canónica: bebe2020/bot-nuevo, rama main. Sitio privado: https://bot-nuevo-liquidez.stablepiece.chatgpt.site · versión17.
+Fuente canónica: bebe2020/bot-nuevo, rama main. Sitio privado: https://bot-nuevo-liquidez.stablepiece.chatgpt.site · versión 18.
 
-Última reparación: [Recuperación de conectores y coordinación](evidence/RECUPERACION_CONECTORES_2026_11_12.md).
+Última entrega: [Sincronización y ejecución de fondo](evidence/SINCRONIZACION_2026_11_12.md). Explicación de fallos y límites: [Reparación](REPARACION_SINCRONIZACION_2026_11_12.md). Operación del respaldo: [Automatización](AUTOMATIZACION.md).
 
-Entrega anterior: [Fundamentos públicos](evidence/FUNDAMENTALES_2026_11_12.md). Antecedente: [Protocolo, macro y PAPER](evidence/ENTREGA_FUNCIONAL_2026_11_12.md).
+Implementado: protocolo 2.2 con micro PERP y modos SPOT, cuatro perfiles, modelo común de selección/cotización/relojes, matriz de 54, indicadores y gráfico interactivo, PAPER único, macro FRED, SoSoValue, DeFi/Hyperliquid y fundamentos con cobertura explícita. Se eliminó el pulpo y sus escenas decorativas: quedan cuatro vistas de análisis con procesos identificados, sin fingir agentes LLM.
 
-Implementado y verificado: protocolo2.2 con micro PERP y modos SPOT; macro20 series FRED; confluencias separadas; PAPER único; cinco laboratorios; fundamentos14 campos×54 con observaciones parciales, identidades y relojes. 180 pruebas Node y build válidos; revisión móvil360px en Chrome. La observación física de Samsung sigue pendiente.
+Comprobado: 192 pruebas Node, build válido, navegación Chrome 360px, publicación 18, escritor de fondo con acceso de servicio y lectura durable posterior. El reporte de evidencia distingue esas comprobaciones de los faltantes.
 
-No confundir cobertura con confirmación: K4 fundamental sigue parcial, sin valoración automática ni rentabilidad certificada. SoSoValue tiene acceso verificado con su clave recuperada; M2 global sigue pendiente. El código no envía órdenes reales ni lee una cuenta privada de exchange.
+A las 18:01 UTC del 12/11: FRED 19/20 vigentes; SoSoValue 16/20 vigentes; fundamentales y DeFi parciales; mercados intercapitales STALE. CoinGlass rechaza la clave recuperada. Los secretos se conservan únicamente en el servidor privado. No afirmar que todos los proveedores están completos por responder HTTP 200.
 
-Siguiente trabajo: completar los insumos pendientes de K4 y fuentes de liquidez/flujo; terminar la matriz trimestral/ciclo; evaluar reglas y Kronos fuera de muestra. Antes de editar, leer la entrega más reciente y HEAD; no reconstruir desde un chat ni reutilizar el comercial como si fuera este bot.
+El panel abierto usa WS/REST por instrumento. GitHub conserva captura/inferencia programadas, pero se observaron demoras reales. Respaldo horario enlazado al sitio y habilitado; primera ejecución futura todavía no observada en esta entrega. No prometer cadencia de cinco minutos garantizada.
 
-Verificado en producción12/11/2026 13:22UTC: FRED19/20 vigentes mediante API autenticada; SoSoValue16/20 vigentes, una vencida y tres ausentes; CoinGecko acceso válido; CoinGlass clave recuperada pero código401. Los secretos permanecen en el servidor privado.
+Pendientes: K4 (unlocks, emisión, usuarios, catalizadores), M2 mundial agregado, mayor cobertura on-chain, evaluación fuera de muestra de reglas/Kronos y verificación física Samsung. Trimestral/ciclo son radares estructurales, no entradas tácticas terminadas. No hay ejecución real ni cuenta privada leída.
 
-La interfaz conserva los139 elementos identificados en la fuente11; coordina consultas automáticas y navegación inicial. El cálculo OHLCV corre en Web Worker, con cancelación de selecciones anteriores; se repinta la vista activa. La prueba Chrome360px permitió navegar durante un escaneo en curso. No certifica la observación física de Android.
+Antes de editar: leer HEAD y esta entrega. Conservar la separación con bebe2020/SNIPER-SMC-OCEANO-54. No reconstruir desde una memoria de chat ni trasladar secretos al navegador.

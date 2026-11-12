@@ -1,9 +1,11 @@
+import {buildReadings} from './auto-protocol.js';
+import {ageMarketRows} from './dashboard.js';
 import {analyticsFetch,connectorStatus} from './connectors.js';
 import {fundamentalsProvider} from './fundamentals.js';
 import {readPaper,savePaper} from './paper-cloud.js';
 import {macroProvider} from './macro.js';
 import {feedHealth,frameClock} from './freshness.js';
-import {refreshEvaluation,PROTOCOL_VERSION} from './protocol.js';
+import {refreshEvaluation,PROTOCOL_VERSION,PROTOCOLS,sectorStrength} from './protocol.js';
 import {globalProviders,crossAssetProviders,onchainProvider,kronosProvider,publicWatchHistory} from './providers.js';
 import {VERSION,UNIVERSE,FRAMES,HORIZONS,POLICIES,n,fact,closed,endOfBar,structures,profileFacts,bookFacts,fundingFact,tradesFact,quarterBars,ema,netLiquidity,fredCSV,CHECKS,riskPlan} from './engine.js';
 import {HTML} from './ui.js';
@@ -18,13 +20,33 @@ const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:
 const getObject=async(b,k)=>{const x=await b.get(k);return x?await x.json():null;};
 const putObject=(b,k,v,opts={})=>b.put(k,JSON.stringify(v),{httpMetadata:{contentType:'application/json'},...opts});
 const err=e=>e?.message?.slice(0,120)||'ERROR_DESCONOCIDO';
+export async function refreshBackground(env,{now=Date.now(),fetcher=fetch,jobs=null}={}){
+ const bucket=env.BUCKET;if(!bucket)throw Error('ALMACENAMIENTO_NO_CONECTADO');
+ const key='background/status-v1.json',prior=await getObject(bucket,key),lockObject=await bucket.get('background/lease-v1.json'),lock=lockObject?await lockObject.json():null;
+ if(lock?.until>now)return {...prior,state:'RUNNING'};
+ const lease=await putObject(bucket,'background/lease-v1.json',{until:now+240000},{onlyIf:lockObject?{etagMatches:lockObject.etag}:{etagDoesNotMatch:'*'}});
+ if(!lease)return {...prior,state:'RUNNING'};
+ const started={state:'RUNNING',lastAttempt:now,lastSuccess:prior?.lastSuccess??null,accountData:false};await putObject(bucket,key,started);
+ try{
+  const sources=jobs||{
+   fred:()=>macroProvider(bucket,fetcher,now,{apiKey:env.FRED_API_KEY,preferMirror:!env.FRED_API_KEY}),
+   sosovalue:()=>sosoProvider(bucket,env.SOSOVALUE_API_KEY,fetcher,now),
+   fundamentals:()=>fundamentalsProvider(bucket,analyticsFetch(env,fetcher),now),
+   defi:()=>globalProviders(bucket,analyticsFetch(env,fetcher),now),
+   markets:()=>crossAssetProviders(bucket,fetcher,now)
+  },entries=Object.entries(sources),results=new Array(entries.length);let next=0;
+  await Promise.all(Array.from({length:2},async()=>{while(next<entries.length){const i=next++,[id,run]=entries[i];try{const value=await run();results[i]={id,state:value?.status||'UNKNOWN',coverage:value?.coverage??null};}catch{results[i]={id,state:'ERROR'};}}}));
+  const useful=results.filter(x=>['OK','PARTIAL'].includes(x.state)).length,value={...started,state:results.every(x=>x.state==='OK')?'OK':useful?'PARTIAL':'ERROR',completedAt:Date.now(),lastSuccess:useful?now:prior?.lastSuccess??null,sources:results,note:'Ejecución de fuentes; las fechas de observación permanecen en cada proveedor. No ejecuta PyTorch ni envía órdenes.'};
+  await putObject(bucket,key,value);return value;
+ }catch{const value={...started,state:'ERROR',completedAt:Date.now(),sources:[],reason:'ACTUALIZACION_NO_COMPLETADA'};await putObject(bucket,key,value);return value;}finally{await putObject(bucket,'background/lease-v1.json',{until:0},{onlyIf:{etagMatches:lease.etag}});}
+}
 async function macroData(bucket,fetcher,now){
  const cached=await getObject(bucket,'macro/latest.json');if(cached&&now-cached.received<3600000)return cached;
  const series={},errors=[];await Promise.all(['WALCL','WTREGEN','RRPONTSYD'].map(async id=>{try{const start=new Date(now-180*86400000).toISOString().slice(0,10);const r=await fetcher('https://fred.stlouisfed.org/graph/fredgraph.csv?id='+id+'&cosd='+start,{signal:AbortSignal.timeout(6000)});if(!r.ok)throw Error('HTTP_'+r.status);series[id]=fredCSV(await r.text(),id);}catch(e){errors.push(id+':'+err(e));}}));
  const result={...netLiquidity(series,now),received:now,errors};await putObject(bucket,'macro/latest.json',result);return result;
 }
 export function freshen(snapshot,now){
- const s=structuredClone(snapshot);s.served=now;
+ const s=structuredClone(snapshot);s.served=now;for(const key of ['universe','radarUniverse'])if(Array.isArray(s[key])){const rows=ageMarketRows(s[key],now);s[key]=buildReadings(rows,PROTOCOLS,sectorStrength(rows));}
  for(const [tf,f] of Object.entries(s.structures||{})){if(f.status==='OK'&&frameClock(s,tf,now).state!=='OK'){f.observedStatus=f.status;f.status=frameClock(s,tf,now).state;}}
  for(const idea of [...Object.values(s.plans||{}).flat(),...(s.opportunities||[])])for(const [profile,e] of Object.entries(idea.evaluations||{}))idea.evaluations[profile]=refreshEvaluation(e,idea,now);
  if(s.book?.asof&&now-s.book.asof>5000){s.book.observedStatus=s.book.observedStatus||s.book.status;s.book.status='STALE';for(const p of Object.values(s.profiles||{})){p.observedAttention=p.observedAttention??p.attention;p.attention=null;for(const c of Object.values(p.checklists||{})){c.observedConfluence=c.observedConfluence||c.confluence;c.confluence='DATOS_VENCIDOS';}}const c=s.coverage?.find(x=>x.id==='10');if(c)c.state='STALE';}
@@ -74,7 +96,12 @@ export default {async fetch(request,env){
   if(url.pathname==='/'&&request.method==='GET')return new Response(HTML,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.bitget.com wss://ws.bitget.com; img-src 'self' data:; frame-ancestors 'self' https://chatgpt.com https://*.chatgpt.com; object-src 'none'; base-uri 'self'",'X-Content-Type-Options':'nosniff'}});
   if(request.method==='GET'&&typeof PUBLIC_ASSETS==='object'&&PUBLIC_ASSETS[url.pathname]){const a=PUBLIC_ASSETS[url.pathname];return new Response(a.body,{headers:{'Content-Type':a.type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
   if(url.pathname==='/api/connectors'&&request.method==='GET')return json(await connectorStatus(env));
-  if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:PROTOCOL_VERSION,admissionRevision:'20261111-fresh-flow',fundamentalSeries:20,build:typeof BUILD_INFO==='object'?BUILD_INFO:null,featureSet:'terminal-integrada-20261112',macroSeries:20,fundamentalMetricsPerAsset:14,labModules:5,liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
+  if(url.pathname==='/api/health')return json({version:VERSION,universe:54,protocolVersion:PROTOCOL_VERSION,admissionRevision:'20261111-fresh-flow',fundamentalSeries:20,build:typeof BUILD_INFO==='object'?BUILD_INFO:null,featureSet:'seleccion-y-datos-compartidos-20261112',macroSeries:20,fundamentalMetricsPerAsset:14,labModules:4,liveVersion:'live-1.0',storage:!!env.BUCKET,account:'NO_VERIFICADA',orders:false,collection:'WS_abierto_y_GitHub_programado',clock:Date.now()});
+  if(url.pathname==='/api/background-status'&&request.method==='GET')return json(await getObject(env.BUCKET,'background/status-v1.json')||{state:'NEVER_RUN',accountData:false});
+  if(url.pathname==='/api/background-refresh'&&request.method==='POST'){
+   if(request.headers.get('X-Bot-Write')!=='1'||request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin)return json({error:'ORIGEN_INVALIDO'},403);
+   return json(await refreshBackground(env));
+  }
   if(url.pathname==='/api/cloud'){const {raw,...status}=await cloudFeed();return json(status);}
   if(url.pathname==='/api/sosovalue'&&request.method==='GET')return json(await sosoProvider(env.BUCKET,env.SOSOVALUE_API_KEY));
   if(url.pathname==='/api/fundamentals'&&request.method==='GET')return json(await fundamentalsProvider(env.BUCKET,analyticsFetch(env)));

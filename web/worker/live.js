@@ -17,8 +17,9 @@ export function tickerMessage(text,symbols,received=Date.now(),market='PERP'){
 export function quoteState(quote,now=Date.now()){
  if(!quote)return 'ESPERANDO_DATOS';
  if(now-quote.received>5000||now-quote.ts>5000||quote.ts>now+5000)return 'DATOS_VENCIDOS';
- return quote.source==='WS'?'EN_VIVO':'REST_3S';
+ return quote.source==='WS'?'EN_VIVO':quote.source==='REST'?'REST_3S':'CAPTURA_RECIENTE';
 }
+const quotePayload=q=>JSON.stringify([q.price,q.ts,q.changes,q.high24h,q.low24h,q.volume,q.markPrice,q.oiBase,q.bid,q.ask,q.fundingRate,q.nextFunding]);
 export class LiveFeed {
  constructor({symbols,socketFactory=url=>new WebSocket(url),now=Date.now,setIntervalFn=(fn,ms)=>setInterval(fn,ms),clearIntervalFn=id=>clearInterval(id),setTimeoutFn=(fn,ms)=>setTimeout(fn,ms),clearTimeoutFn=id=>clearTimeout(id),onQuote=()=>{},onState=()=>{},market='PERP'}){
   Object.assign(this,{market,symbols,socketFactory,now,setIntervalFn,clearIntervalFn,setTimeoutFn,clearTimeoutFn,onQuote,onState});this.quotes=new Map();this.messages=0;this.priceChanges=0;this.generation=0;this.attempt=0;this.stopped=true;this.state='DESCONECTADO';
@@ -29,7 +30,7 @@ export class LiveFeed {
   if(this.stopped)return;const generation=++this.generation;this.notify(this.attempt?'RECONECTANDO':'CONECTANDO');
   let socket;try{socket=this.socketFactory(BITGET_WS);}catch(e){this.notify('SIN_CONEXION',String(e.message));this.retry();return;}this.socket=socket;this.lastFrame=this.now();
   socket.onopen=()=>{if(this.stopped||generation!==this.generation)return;this.lastFrame=this.now();this.notify('CONECTADO_ESPERANDO_PRECIOS');socket.send(JSON.stringify({op:'subscribe',args:this.symbols.map(instId=>({instType:this.market==='SPOT'?'SPOT':'USDT-FUTURES',channel:'ticker',instId}))}));this.pingTimer=this.setIntervalFn(()=>{if(this.stopped||generation!==this.generation)return;if(this.now()-this.lastFrame>65000){socket.close();return;}if(socket.readyState===1)socket.send('ping');},25000);};
-  socket.onmessage=e=>{if(this.stopped||generation!==this.generation)return;this.lastFrame=this.now();const q=tickerMessage(e.data,this.symbols,this.now(),this.market);if(!q)return;if(q.kind==='ERROR'){this.notify('ERROR_SUSCRIPCION',q.message);this.stopped=true;this.clearTimers();socket.close();return;}if(q.kind!=='QUOTE')return;const old=this.quotes.get(q.symbol);if(old&&q.ts<old.ts)return;if(old&&q.ts===old.ts&&q.price===old.price)return;this.quotes.set(q.symbol,q);this.messages++;if(old&&q.price!==old.price)this.priceChanges++;this.attempt=0;this.notify('RECIBIENDO');this.onQuote(q,{messages:this.messages,priceChanges:this.priceChanges});};
+  socket.onmessage=e=>{if(this.stopped||generation!==this.generation)return;this.lastFrame=this.now();const q=tickerMessage(e.data,this.symbols,this.now(),this.market);if(!q)return;if(q.kind==='ERROR'){this.notify('ERROR_SUSCRIPCION',q.message);this.stopped=true;this.clearTimers();socket.close();return;}if(q.kind!=='QUOTE')return;const old=this.quotes.get(q.symbol);if(old&&q.ts<old.ts)return;if(old&&quotePayload(q)===quotePayload(old))return;this.quotes.set(q.symbol,q);this.messages++;if(old&&q.price!==old.price)this.priceChanges++;this.attempt=0;this.notify('RECIBIENDO');this.onQuote(q,{messages:this.messages,priceChanges:this.priceChanges});};
   socket.onerror=()=>{if(!this.stopped&&generation===this.generation)this.notify('ERROR_CONEXION');};
   socket.onclose=()=>{if(this.stopped||generation!==this.generation)return;this.clearTimers();this.notify('DESCONECTADO');this.retry();};
  }
