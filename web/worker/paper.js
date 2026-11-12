@@ -1,3 +1,4 @@
+import {protocolApplicable} from './protocol.js';
 import {planUUID} from './journal.js';
 export class PaperBook{
  constructor(storage){this.storage=storage;this.key='terminal54-paper-v1';}
@@ -6,12 +7,14 @@ export class PaperBook{
  arm(idea,sizing,feePct,now=Date.now()){
   if(sizing?.status!=='SIMULACION'||!(sizing.quantity>0)||!Number.isFinite(feePct)||feePct<0||idea.market==='SPOT'&&idea.side==='SHORT')throw Error('CONFIGURACION_DE_SIMULACION_INCOMPLETA');
   if(!['LONG','SHORT'].includes(idea.side)||idea.targets.length!==3)throw Error('TESIS_NO_ADMITIDA_PARA_SIMULACION');
+  if(idea.horizon&&!protocolApplicable(idea.horizon,idea.market))throw Error('MODALIDAD_NO_APLICA_MERCADO');
+  const sign=idea.side==='LONG'?1:-1;if(![idea.entry,idea.stop,...idea.targets].every(x=>Number.isFinite(x)&&x>0)||sign*(idea.entry-idea.stop)<=0||!idea.targets.every((t,i)=>sign*(t-idea.entry)>0&&(!i||sign*(t-idea.targets[i-1])>0)))throw Error('GEOMETRIA_INVALIDA');
   const rows=this.read(),old=rows.find(x=>x.sourceId===(idea.lifecycleId||idea.id));if(old)return old;
-  const p={id:planUUID(),sourceId:idea.lifecycleId||idea.id,symbol:idea.symbol,market:idea.market,side:idea.side,entry:idea.entry,stop:idea.stop,targets:[...idea.targets],quantity:sizing.quantity,remaining:sizing.quantity,fee:feePct/100,state:'SIM_PENDIENTE',armedAt:now,net:0,targetIndex:0,events:[],policy:'FILLS_HIPOTETICOS_POR_TICKS; TERCIOS; COMISION_DECLARADA; SIN_LIQUIDEZ_O_CUENTA_REAL'};
+  const p={id:planUUID(),sourceId:idea.lifecycleId||idea.id,symbol:idea.symbol,market:idea.market,side:idea.side,horizon:idea.horizon||null,formed:idea.formed||null,entry:idea.entry,stop:idea.stop,targets:[...idea.targets],quantity:sizing.quantity,remaining:sizing.quantity,fee:feePct/100,state:'SIM_PENDIENTE',armedAt:now,net:0,targetIndex:0,events:[],policy:'FILLS_HIPOTETICOS_POR_TICKS; TERCIOS; COMISION_DECLARADA; SIN_LIQUIDEZ_O_CUENTA_REAL'};
   rows.unshift(p);this.write(rows);return p;
  }
  quote(q,now=Date.now()){
-  if(!q||!Number.isFinite(q.price)||q.price<=0||q.ts>now+5000||now-q.ts>5000||now-q.received>5000)return;
+  if(!q||!Number.isFinite(q.price)||!Number.isFinite(q.ts)||!Number.isFinite(q.received)||q.price<=0||q.ts>now+5000||now-q.ts>5000||now-q.received>5000||q.received>now+5000)return;
   const rows=this.read();let changed=false;
   for(const p of rows){if(p.symbol!==q.symbol||p.market!==q.market||q.ts<p.armedAt||q.ts<=p.lastAsOf||['SIM_CERRADA','SIM_CANCELADA'].includes(p.state))continue;
    const sign=p.side==='LONG'?1:-1;p.lastAsOf=q.ts;p.lastPrice=q.price;

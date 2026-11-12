@@ -2,9 +2,12 @@ import {VERSION,FRAMES,HORIZONS,POLICIES,n,endOfBar,structures,volume,riskPlan} 
 import {fibonacci,indicatorSeries,volumeProfile,discountFromHistory} from './indicators.js';
 import {ASSETS,TAXONOMY,assetFor} from './universe.js';
 import {barClock,frameClock} from './freshness.js';
-export const PROTOCOL_VERSION='protocolo-2.1';
+import {accumulationState} from './technicals.js';
+export const PROTOCOL_VERSION='protocolo-2.2';
 export const PROTOCOLS={
- MICRO_PIVOTE:{label:'Micro pivote',frames:['1m','5m','15m'],window:4,kind:'TACTICO',rule:'Barrido de 20 extremos y reclaim cerrado en 1m; contexto 5m/15m. Detección provisional separada de cierre.'},
+ MICRO_PIVOTE:{label:'Micro pivote · futuros',markets:['PERP'],frames:['1m','5m','15m'],window:4,kind:'TACTICO',rule:'Solo PERP. Barrido de 20 extremos y reclaim cerrado en 1m; contexto 5m/15m. Detección provisional separada de cierre.'},
+ EXPLOSION:{label:'Explosión SPOT',markets:['SPOT'],frames:['5m','15m','1H'],window:4,kind:'TACTICO',rule:'SPOT LONG: barrido/reclaim o ruptura con retesteo cerrado en 5m, volumen relativo ≥2× y CMF positivo. Caída o subida fuerte aislada permanece en vigilancia.'},
+ ACUMULACION:{label:'Acumulación SPOT',markets:['SPOT'],frames:['1Dutc','1Wutc','1Mutc'],window:4,kind:'TACTICO',rule:'SPOT LONG: compresión diaria, CMF/OBV/ADL compatibles, defensa o zona Fibonacci con invalidación propia. Proxy OHLCV; descuento no prueba infravaloración.'},
  SCALP:{label:'Scalping',frames:['5m','15m','1H'],window:4,kind:'TACTICO',rule:'Barrido/reclaim 5m o ruptura cerrada con retesteo; invalidación táctica. No trasladar su stop a swing.'},
  DIARIO:{label:'Diario',frames:['15m','1H','4H'],window:4,kind:'TACTICO',rule:'Gatillo 15m cerrado y contexto 1H/4H. Anticipación conserva condiciones pendientes.'},
  SEMANAL:{label:'Swing semanal',frames:['4H','1Dutc','1Wutc'],window:4,kind:'TACTICO',rule:'Barrido o retesteo 4H; contexto diario/semanal. Zonas y targets pertenecen a este horizonte.'},
@@ -12,6 +15,8 @@ export const PROTOCOLS={
  TRIMESTRAL:{label:'Trimestre calendario',frames:['1Wutc','1Mutc','3M'],kind:'ESTRUCTURAL',rule:'Trimestres completos de calendario, independientes de rolling 90 días. Radar de contexto; no dispara entrada táctica.'},
  CICLO_3_ANOS:{label:'Ciclo · 3 años',frames:['1Mutc','3M','36M'],kind:'ESTRUCTURAL',rule:'Contexto mensual y disponibilidad de 36 meses propios. No hereda historia de otro token. No es predicción del ciclo.'}
 };
+export const protocolApplicable=(horizon,market)=>!!PROTOCOLS[horizon]&&(!PROTOCOLS[horizon].markets||PROTOCOLS[horizon].markets.includes(market));
+function notApplicable(horizon,market,profile){return {version:PROTOCOL_VERSION,profile,admission:'NO_APLICA_MERCADO',phase:'NO_APLICA',kind:'OBSERVACION',pending:['Elegir una modalidad disponible para '+market],keys:Object.fromEntries(['K1','K2','K3','K4'].map(k=>[k,{state:'NOT_APPLICABLE',reason:PROTOCOLS[horizon].label+' no aplica a '+market}])),summary:'Modalidad no aplicable al mercado seleccionado.'};}
 const keyFact=(state,reason,evidence=null)=>({state,reason,evidence});
 function currentPrice(s){return s.currentPrice!==undefined?n(s.currentPrice):n(s.ticker?.lastPr);}
 function instrumentTick(s){const p=n(s.instrument?.pricePlace??s.instrument?.pricePrecision),step=n(s.instrument?.priceEndStep)??1;return p!==null&&p>=0&&p<=12&&step>0?step*10**(-p):null;}
@@ -33,6 +38,7 @@ function admissionFor(profile,context,flow,trigger,geometry,invalidated,expired)
  return ready?'CONFIRMADA':trigger&&flow==='CONFLICT'?'ANTICIPADA_CON_FLUJO_CONTRARIO':'ANTICIPADA';
 }
 export function refreshEvaluation(e,idea,now=Date.now(),quote=null){
+ if(!protocolApplicable(idea.horizon,idea.market))return notApplicable(idea.horizon,idea.market,e.profile);
  const p=PROTOCOLS[idea.horizon],tf=p.frames[0],keys=structuredClone(e.keys);
  const contexts=(keys.K1.evidence||[]).map(x=>({...x,clock:barClock(x.tf,x.asof,now)}));
  keys.K1.state=contexts.length===2&&contexts.every(x=>x.status==='OK'&&x.clock.state==='OK')?(contexts.every(x=>x.regime===idea.side)?'PASS':'CONFLICT'):'UNKNOWN';
@@ -53,6 +59,7 @@ export function refreshEvaluation(e,idea,now=Date.now(),quote=null){
   summary:invalidated?'El precio atravesó el stop. No se rearma por un rebote.':expired?'El evento superó su ventana de entrada.':'K1 '+keys.K1.state+' · K2 '+keys.K2.state+' · K3 '+keys.K3.state+'. Perfil '+e.profile+': '+admission.toLowerCase().replaceAll('_',' ')+'.'};
 }
 export function evaluateIdea(s,idea,profile,now=Date.now()){
+ if(!protocolApplicable(idea.horizon,idea.market))return notApplicable(idea.horizon,idea.market,profile);
  const p=PROTOCOLS[idea.horizon],tf=p.frames[0],sign=idea.side==='LONG'?1:-1,price=currentPrice(s),b=s.closed[tf]||[],clock=frameClock(s,tf,now),vol=volume(b),book=s.book;
  const contexts=p.frames.slice(1).map(k=>({tf:k,status:s.structures[k]?.status,regime:s.structures[k]?.value?.regime,asof:frameClock(s,k,now).asof}));
  const bookAsOf=n(book?.asof),imbalance=n(book?.value?.imbalance),tradeTo=n(s.trades?.value?.to),delta=n(s.trades?.value?.deltaNotional),inputs=[];
@@ -68,12 +75,14 @@ export function evaluateIdea(s,idea,profile,now=Date.now()){
  const priceAsOf=s.currentPrice!==undefined?n(s.currentPriceAsOf):n(s.ticker?.ts??s.sourceAsOf);
  return refreshEvaluation({profile,keys,phase:invalidated?'INVALIDADA':'OBSERVADA',currentPrice:price,priceAsOf,stats:'NO_CERTIFICADA',sizing:'NO_CONFIGURADO'},idea,now);
 }
-export function protocolIdeas(s,horizon){const p=PROTOCOLS[horizon];if(!p||p.kind==='ESTRUCTURAL')return [];const tf=p.frames[0],st=s.structures[tf],b=s.closed[tf]||[];if(st?.status!=='OK')return [];const candidates=[],price=currentPrice(s),allPivots=p.frames.flatMap(frame=>s.structures[frame]?.status==='OK'?s.structures[frame].value.pivots||[]:[]);
+export function protocolIdeas(s,horizon){const p=PROTOCOLS[horizon];if(!p||!protocolApplicable(horizon,s.market)||p.kind==='ESTRUCTURAL')return [];const tf=p.frames[0],st=s.structures[tf],b=s.closed[tf]||[];if(st?.status!=='OK')return [];const candidates=[],price=currentPrice(s),allPivots=p.frames.flatMap(frame=>s.structures[frame]?.status==='OK'?s.structures[frame].value.pivots||[]:[]);
+ if(horizon==='EXPLOSION'&&!(volume(b).value?.ratio>=2&&volume(b).value?.cmf>0))return [];
+ if(horizon==='ACUMULACION'&&accumulationState(b).state!=='ACUMULACION_CANDIDATA')return [];
  for(const e of st.value.sweeps){const sign=e.side==='LONG'?1:-1,targets=allPivots.filter(x=>x.type===(e.side==='LONG'?'HIGH':'LOW')&&sign*(x.price-e.level)>0).map(x=>x.price),idea=makeGeometry(s,horizon,e.side,'BARRIDO_RECLAIM',e.detected,e.level,e.extreme,targets);if(idea)candidates.push(idea);}
  const fib=fibonacci(b,tf,price);if(fib.status==='OK'&&price!==null&&price>=fib.ote[0]-st.value.atr*.5&&price<=fib.entryZone[1]+st.value.atr*.5){const entry=(fib.entryZone[0]+fib.entryZone[1])/2,idea=makeGeometry(s,horizon,fib.side,'FIBONACCI',fib.asof,entry,fib.anchorA.price,[fib.anchorB.price,...fib.extensions.map(x=>x.price)]);if(idea)candidates.push(idea);}
  // Retesteo causal: ruptura en una vela anterior y una vela posterior cerrada defendiendo el nivel.
  for(let i=Math.max(30,b.length-4);i<b.length-1;i++){const earlier=structures(b.slice(0,i+1),tf);if(earlier.value?.bos){const side=earlier.value.bos,sign=side==='LONG'?1:-1,level=earlier.value.pivots.filter(x=>x.type===(side==='LONG'?'HIGH':'LOW')).at(-1)?.price,r=b[i+1];if(level&&r[3]<=level&&r[2]>=level&&sign*(r[4]-level)>0){const idea=makeGeometry(s,horizon,side,'CONTINUACION_RETEST',endOfBar(r[0],tf),level,side==='LONG'?r[3]:r[2],allPivots.filter(x=>x.type===(side==='LONG'?'HIGH':'LOW')).map(x=>x.price));if(idea)candidates.push(idea);}}}
- return [...new Map(candidates.filter(x=>s.market!=='SPOT'||x.side==='LONG').map(x=>[x.id,x])).values()].map(x=>({...x,evaluations:Object.fromEntries(Object.keys(POLICIES).map(name=>[name,evaluateIdea(s,x,name,s.received)]))}));
+ return [...new Map(candidates.filter(x=>(s.market!=='SPOT'||x.side==='LONG')&&(horizon!=='EXPLOSION'||x.family!=='FIBONACCI')).map(x=>[x.id,x])).values()].map(x=>({...x,evaluations:Object.fromEntries(Object.keys(POLICIES).map(name=>[name,evaluateIdea(s,x,name,s.received)]))}));
 }
 export function enrichSnapshot(s){s.indicators=Object.fromEntries(Object.entries(s.closed).map(([tf,b])=>[tf,{rsi:rsiSeriesLast(b),fib:fibonacci(b,tf,currentPrice(s)),profile:volumeProfile(b)}]));s.asset=assetFor(s.symbol);s.protocols=PROTOCOLS;s.plans=Object.fromEntries(Object.keys(PROTOCOLS).map(h=>[h,protocolIdeas(s,h)]));s.narrative=marketNarrative(s);s.taxonomyRevision=TAXONOMY.revision;return s;}
 function rsiSeriesLast(b){return b.length?indicatorSeries(b).rsi.at(-1):null;}
@@ -82,6 +91,7 @@ export function sectorStrength(universe){const median=xs=>{const a=xs.sort((x,y)
 export {discountFromHistory};
 
 export function protocolReadiness(s, horizon, profile, idea = null, now = Date.now()) {
+ if(!protocolApplicable(horizon,s.market))return notApplicable(horizon,s.market,profile);
  if (idea) return evaluateIdea(s, idea, profile, now);
  const protocol = PROTOCOLS[horizon];
  const contexts = protocol.frames.map(tf => ({tf,status:tf==='36M'?s.cycle?.status:frameClock(s,tf,now).state,

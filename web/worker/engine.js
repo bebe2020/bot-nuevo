@@ -3,7 +3,7 @@ import {SYMBOLS} from './universe.js';
 export const VERSION = 'terminal-2.0';
 export const UNIVERSE = SYMBOLS;
 export const FRAMES = {'1m':60000,'5m':300000,'15m':900000,'30m':1800000,'1H':3600000,'2H':7200000,'4H':14400000,'6H':21600000,'8H':28800000,'12H':43200000,'1Dutc':86400000,'1Wutc':604800000,'1Mutc':null};
-export const HORIZONS = {MICRO_PIVOTE:['1m','5m','15m'],SCALP:['5m','15m','1H'],DIARIO:['15m','1H','4H'],SEMANAL:['4H','1Dutc','1Wutc'],MENSUAL:['1Dutc','1Wutc','1Mutc'],TRIMESTRAL:['1Wutc','1Mutc','3M'],CICLO_3_ANOS:['1Mutc','3M','36M']};
+export const HORIZONS = {EXPLOSION:['5m','15m','1H'],ACUMULACION:['1Dutc','1Wutc','1Mutc'],MICRO_PIVOTE:['1m','5m','15m'],SCALP:['5m','15m','1H'],DIARIO:['15m','1H','4H'],SEMANAL:['4H','1Dutc','1Wutc'],MENSUAL:['1Dutc','1Wutc','1Mutc'],TRIMESTRAL:['1Wutc','1Mutc','3M'],CICLO_3_ANOS:['1Mutc','3M','36M']};
 export const POLICIES = {
  AGRESIVO:{volume:200000,range:5.5,vr:1.35,climax:2.2,cmf:.05,book:.15,flowBook:.12,flowCmf:.03,zoneVol:1.45,body:.48,high:6,medium:4,osc:8,score:5.5,rangeCheck:4.2,weights:[1.8,.04,1.8,9,16,.3]},
  CONSERVADOR:{volume:300000,range:4.5,vr:1.6,climax:2.5,cmf:.08,book:.20,flowBook:.18,flowCmf:.05,zoneVol:1.8,body:.55,high:7,medium:5,osc:15,score:6.5,rangeCheck:3.5,weights:[2,.03,1.5,8,12,.4]}
@@ -88,7 +88,7 @@ export function riskPlan({side,entry,stop,targets,quantity,entryFee,exitFee,fund
 }
 export function fredCSV(text,id){
  const lines=text.trim().split(/\r?\n/),head=lines.shift().split(',');if(head.length!==2||head[1]!==id||!['DATE','observation_date'].includes(head[0]))throw Error('FRED_CSV_INVALIDO');
- return lines.map(x=>x.split(',')).filter(r=>/^\d{4}-\d{2}-\d{2}$/.test(r[0])&&n(r[1])!==null&&n(r[1])>=0).map(([date,value])=>({date,value:Number(value)}));
+ return lines.map(x=>x.split(',')).filter(r=>/^\d{4}-\d{2}-\d{2}$/.test(r[0])&&n(r[1])!==null).map(([date,value])=>({date,value:Number(value)}));
 }
 export function netLiquidity(series,now){
  if(['WALCL','WTREGEN','RRPONTSYD'].some(k=>!series[k]?.length))return fact(null,'UNKNOWN','FRED_COBERTURA_INCOMPLETA');

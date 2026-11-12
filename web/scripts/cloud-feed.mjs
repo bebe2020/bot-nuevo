@@ -1,6 +1,7 @@
 // Captura pública programable. Nunca lee cuentas ni datos del sitio privado.
 import {acquire,assemble,primeCache} from '../worker/collector.js';
 import {VERSION} from '../worker/engine.js';
+import {macroProvider} from '../worker/macro.js';
 import {publicContext} from '../worker/context.js';
 import {pathToFileURL} from 'node:url';
 export const DATA_BRANCH='market-data';
@@ -28,7 +29,7 @@ export async function publishDataEntries(api,entries,message){
  }
  throw Error('CONFLICTO_PUBLICACION_PUBLICA');
 }
-export async function publishFeed({repository,token,raw,context=null,error=null,fetcher=fetch,now=Date.now()}){
+export async function publishFeed({repository,token,raw,context=null,macro=null,error=null,fetcher=fetch,now=Date.now()}){
  if(!token)throw Error('TOKEN_DE_WORKFLOW_NO_DISPONIBLE');
  const api=(p,m,b)=>githubRequest(repository,token,p,m,b,fetcher),entries=[];
  const status={version:VERSION,universe:54,lastAttempt:now,state:error?'ERROR':'OK',source:'BITGET_PUBLICO',targetIntervalMinutes:5,codeRevision:process.env.GITHUB_SHA||null,runId:process.env.GITHUB_RUN_ID||null,errors:error?[String(error).slice(0,160)]:[],accountData:false};
@@ -39,13 +40,14 @@ export async function publishFeed({repository,token,raw,context=null,error=null,
   entries.push({path:'latest.json',mode:'100644',type:'blob',content:JSON.stringify(raw)},{path,mode:'100644',type:'blob',content:JSON.stringify({day,records:history})});
  }
  if(context&&(context.macro?.value||context.calendar?.items?.length||context.news?.items?.length))entries.push({path:'context.json',mode:'100644',type:'blob',content:JSON.stringify(context)});
+ if(macro?.metrics?.length===20)entries.push({path:'macro.json',mode:'100644',type:'blob',content:JSON.stringify({...macro,accountData:false})});
  entries.push({path:'status.json',mode:'100644',type:'blob',content:JSON.stringify(status)});
  const commit=await publishDataEntries(api,entries,error?'Registrar fallo de captura pública':'Actualizar captura pública de mercado');return {commit,status};
 }
 export async function main(){
  const repository=process.env.GITHUB_REPOSITORY,token=process.env.GITHUB_TOKEN;let raw;
  try{if(/^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/.test(repository||'')){try{const prior=await fetch('https://raw.githubusercontent.com/'+repository+'/market-data/latest.json',{signal:AbortSignal.timeout(10000)});if(prior.ok)primeCache(await prior.json());}catch{}}raw=await acquire('BTCUSDT');publicSummary(raw);}catch(e){if(token)await publishFeed({repository,token,error:e.message});throw e;}
- const context=await publicContext(null);
- const result=await publishFeed({repository,token,raw,context});console.log(JSON.stringify({state:result.status.state,sourceAsOf:result.status.sourceAsOf,received:raw.received,commit:result.commit,branch:DATA_BRANCH,context:{macro:context.macro?.status,calendar:context.calendar?.status,news:context.news?.status}}));
+ const [context,macro]=await Promise.all([publicContext(null),macroProvider(null)]);
+ const result=await publishFeed({repository,token,raw,context,macro});console.log(JSON.stringify({state:result.status.state,sourceAsOf:result.status.sourceAsOf,received:raw.received,commit:result.commit,branch:DATA_BRANCH,context:{macro:context.macro?.status,calendar:context.calendar?.status,news:context.news?.status}}));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(e=>{console.error('Captura pública fallida: '+e.message);process.exitCode=1;});
