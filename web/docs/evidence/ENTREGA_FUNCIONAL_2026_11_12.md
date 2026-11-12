@@ -5,9 +5,9 @@ Proyecto exclusivo: bebe2020/bot-nuevo. El comercial SNIPER/Océano no se modifi
 ## Publicación y fuente
 
 - Sitio privado: https://bot-nuevo-liquidez.stablepiece.chatgpt.site
-- Versión 12. Fuente Sites: 7dac2c6328512ceb38f6716bf98595352d5e4b6e.
-- Despliegue appgdep_6af56b5d0fc88191970792ab7f64b689: succeeded.
-- Huella del código compilado: 7362a11be9a1640430e055b7b5902501d769a6962165f6f3a68b8056a541253e.
+- Versión 14. Fuente Sites: e53f57acc29ae6b046eab084429dbd0aa00c4517.
+- Despliegue appgdep_6af56e4ce2f08191b4b424117971039c: succeeded.
+- Huella del código compilado: 273884f2327eea4d96a88632abab276f8964a952970ea354ca29bc65893ce0dd.
 - Protocolo 2.2; IDs geométricos conservan el namespace anterior para no rearmar eventos.
 
 ## Implementado y verificado localmente
@@ -25,7 +25,7 @@ Proyecto exclusivo: bebe2020/bot-nuevo. El comercial SNIPER/Océano no se modifi
 
 ## Comprobaciones
 
-- 152/152 pruebas Node aprobadas, sin fallos ni omitidas.
+- 153/153 pruebas Node aprobadas, sin fallos ni omitidas.
 - Build y validación del Worker ESM aprobados.
 - API del paquete: health 200/protocolo2.2, macro 200/19 de20 vigentes, PAPER 200/libro vacío de prueba.
 - Concurrencia de dos POST PAPER: uno 200 y otro 409; no hay sobreescritura silenciosa.
@@ -51,3 +51,9 @@ La continuidad 24/7 no queda certificada: GitHub puede demorar ejecuciones. El p
 - PR antiguas #3/#4/#6 requieren comparación de diferencias; no se fusionaron a ciegas.
 
 No se leyeron cuentas privadas de exchanges ni se enviaron órdenes.
+
+## Corrección tras observar producción
+
+FRED respondió de forma distinta desde Worker: se observó menor cobertura directa en la primera publicación. La implementación activa ahora prefiere el espejo público reciente y validado del colector cuando está disponible, conservando asof y received de cada observación. El colector programado consulta FRED directamente para evitar un bucle de republicación del espejo. La captura automática y su CI del commit 0034e763 terminaron con success.
+
+Se eliminó del repositorio de publicación el starter worker/index.js que no participaba en la aplicación. La huella calculada desde las fuentes activas de GitHub y Sites coincide: 273884f2327eea4d96a88632abab276f8964a952970ea354ca29bc65893ce0dd. Producción tras corregir el transporte: health y macro HTTP200, protocolo2.2 y cobertura19/20; Kronos HTTP200,54/54,ON_TIME en la comprobación. La ausencia de una serie se mantiene visible.

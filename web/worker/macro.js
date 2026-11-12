@@ -82,10 +82,28 @@ export function usdLiquidity(metrics,now=Date.now()) {
     scope:'PROXY_USD_FED; WALCL_Y_TGA_NIVEL_MIERCOLES; RRP_MISMA_FECHA; NO_LIQUIDEZ_GLOBAL'};
 }
 
-async function readMacro(bucket,fetcher,now) {
+async function readMacro(bucket,fetcher,now,{preferMirror=true}={}) {
   const file=await bucket?.get('providers/macro-v1.json');
   const prior=file?await file.json():(typeof MACRO_SEED==='object'?MACRO_SEED:null);
-  if (prior?.nextCheck>now) return ageMacro(prior,now);
+  if (prior?.nextCheck>now&&!prior.metrics?.some(x=>x.error)) return ageMacro(prior,now);
+  // FRED may reject a Worker while allowing the scheduled public collector.
+  // A successful mirror read is a new transport, never a new source timestamp.
+  if(preferMirror)try {
+    const r=await fetcher(MACRO_MIRROR+'?slot='+Math.floor(now/300000),{signal:AbortSignal.timeout(7000)});
+    if(r.ok){
+      const text=await r.text();if(text.length>1000000)throw Error('CAPTURA_DEMASIADO_GRANDE');
+      const mirrorValue=JSON.parse(text),mirror=validateMacroMirror(mirrorValue,now);
+      if(Number.isFinite(mirrorValue.checkedAt)&&mirrorValue.checkedAt<=now&&now-mirrorValue.checkedAt<=1800000&&mirror.some(x=>x.value!==null)){
+        const metrics=mirror.map(x=>{
+          const old=prior?.metrics?.find(p=>p.id===x.id);
+          return old&&old.asof>x.asof||old&&old.asof===x.asof&&old.received>x.received&&!old.error?old:x;
+        });
+        const value={metrics,accountData:false,checkedAt:now,nextCheck:now+300000,transport:'CAPTURA_PUBLICA_GITHUB',captureCheckedAt:mirrorValue.checkedAt};
+        if(bucket)await bucket.put('providers/macro-v1.json',JSON.stringify(value),{httpMetadata:{contentType:'application/json'}});
+        return ageMacro(value,now);
+      }
+    }
+  }catch{}
   const metrics=new Array(MACRO_SERIES.length); let next=0;
   await Promise.all(Array.from({length:4},async()=>{
     while(next<MACRO_SERIES.length) {
@@ -114,9 +132,9 @@ async function readMacro(bucket,fetcher,now) {
   return ageMacro(value,now);
 }
 
-export function macroProvider(bucket,fetcher=fetch,now=Date.now()) {
-  if(fetcher!==fetch || !bucket) return readMacro(bucket,fetcher,now);
-  if(!macroFlights.has(bucket)) macroFlights.set(bucket,readMacro(bucket,fetcher,now).finally(()=>macroFlights.delete(bucket)));
+export function macroProvider(bucket,fetcher=fetch,now=Date.now(),options={}) {
+  if(fetcher!==fetch || !bucket) return readMacro(bucket,fetcher,now,options);
+  if(!macroFlights.has(bucket)) macroFlights.set(bucket,readMacro(bucket,fetcher,now,options).finally(()=>macroFlights.delete(bucket)));
   return macroFlights.get(bucket);
 }
 

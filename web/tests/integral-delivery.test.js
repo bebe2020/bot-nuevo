@@ -60,6 +60,12 @@ test('Espejo macro conserva reloj y rechaza identidad duplicada o timestamp futu
  const duplicate=structuredClone(value);duplicate.metrics[1]=duplicate.metrics[0];assert.throws(()=>validateMacroMirror(duplicate,NOW));
  const future=structuredClone(value);future.metrics[0].received=NOW+1;assert.throws(()=>validateMacroMirror(future,NOW));
 });
+test('Servidor usa captura pública reciente sin retimbrar observaciones',async()=>{
+ const value={accountData:false,checkedAt:NOW-1000,metrics:MACRO_SERIES.map(def=>({...def,value:1,date:'2026-11-10',asof:Date.UTC(2026,10,10),received:NOW-1000,status:'OK',history:[{date:'2026-11-10',value:1}]}))};
+ const calls=[],result=await macroProvider(null,async url=>{calls.push(url);return Response.json(value);},NOW);
+ assert.equal(calls.length,1);assert.match(calls[0],/market-data\/macro.json/);assert.equal(result.coverage.observed,20);
+ assert.equal(result.metrics[0].received,NOW-1000);assert.equal(result.captureCheckedAt,NOW-1000);
+});
 test('Fallo de FRED conserva el último valor con su fecha y estado STALE',async()=>{
  const bucket=new MemoryBucket(),fetcher=async url=>{const id=new URL(url).searchParams.get('id');return new Response('DATE,'+id+'\n2026-11-10,1');};
  const first=await macroProvider(bucket,fetcher,NOW);

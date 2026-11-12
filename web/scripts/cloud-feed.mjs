@@ -47,7 +47,7 @@ export async function publishFeed({repository,token,raw,context=null,macro=null,
 export async function main(){
  const repository=process.env.GITHUB_REPOSITORY,token=process.env.GITHUB_TOKEN;let raw;
  try{if(/^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/.test(repository||'')){try{const prior=await fetch('https://raw.githubusercontent.com/'+repository+'/market-data/latest.json',{signal:AbortSignal.timeout(10000)});if(prior.ok)primeCache(await prior.json());}catch{}}raw=await acquire('BTCUSDT');publicSummary(raw);}catch(e){if(token)await publishFeed({repository,token,error:e.message});throw e;}
- const [context,macro]=await Promise.all([publicContext(null),macroProvider(null)]);
+ const [context,macro]=await Promise.all([publicContext(null),macroProvider(null,fetch,Date.now(),{preferMirror:false})]);
  const result=await publishFeed({repository,token,raw,context,macro});console.log(JSON.stringify({state:result.status.state,sourceAsOf:result.status.sourceAsOf,received:raw.received,commit:result.commit,branch:DATA_BRANCH,context:{macro:context.macro?.status,calendar:context.calendar?.status,news:context.news?.status}}));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(e=>{console.error('Captura pública fallida: '+e.message);process.exitCode=1;});
