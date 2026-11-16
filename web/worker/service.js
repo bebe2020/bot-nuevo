@@ -10,6 +10,7 @@ import {globalProviders,crossAssetProviders,onchainProvider,kronosProvider,publi
 import {VERSION,UNIVERSE,FRAMES,HORIZONS,POLICIES,n,fact,closed,endOfBar,structures,profileFacts,bookFacts,fundingFact,tradesFact,quarterBars,ema,netLiquidity,fredCSV,CHECKS,riskPlan} from './engine.js';
 import {HTML} from './ui.js';
 import {acquire,assemble,makeCoverage} from './collector.js';
+import {bybitPublicSnapshot} from './bybit-public.js';
 import {publicContext} from './context.js';
 import {sosoProvider} from './sosovalue.js';
 const PUBLIC_ASSETS = '__BUILD_PUBLIC_ASSETS__';
@@ -112,7 +113,8 @@ export default {async fetch(request,env){
   if(url.pathname==='/api/onchain'&&request.method==='GET')return json(await onchainProvider(env.BUCKET,url.searchParams.get('symbol')||'BTCUSDT'));
   if(url.pathname==='/api/watch-public'&&request.method==='GET')return json(await publicWatchHistory());
   if(url.pathname==='/api/kronos'&&request.method==='GET')return json(await kronosProvider(env.BUCKET,url.searchParams.get('symbol')||'BTCUSDT',url.searchParams.get('market')||'PERP'));
-  if(url.pathname==='/api/snapshot'&&request.method==='GET'){const symbol=url.searchParams.get('symbol')||'BTCUSDT',market=url.searchParams.get('market')||'PERP';if(!UNIVERSE.includes(symbol)||!['SPOT','PERP'].includes(market))return json({error:'INSTRUMENTO_NO_ADMITIDO'},400);let s=await getObject(env.BUCKET,snapshotKey(symbol,market));if(symbol==='BTCUSDT'&&market==='PERP'&&(!s||Date.now()-s.received>60000)){const c=await cloudFeed();if(c.raw?.version===VERSION&&c.raw?.symbol===symbol&&(!s||c.raw.received>s.received)){try{s=await ingest(env.BUCKET,c.raw,{maxAgeMs:1800000,collector:'GITHUB_ACTIONS_PUBLICO'});}catch{}}}return json(s?freshen(s,Date.now()):{symbol,market,waitingForCollector:true,version:VERSION});}
+  if(url.pathname==='/api/bybit-public'&&request.method==='GET'){const symbol=url.searchParams.get('symbol')||'BTCUSDT',market=url.searchParams.get('market')||'PERP';if(!UNIVERSE.includes(symbol)||!['SPOT','PERP'].includes(market))return json({error:'INSTRUMENTO_NO_ADMITIDO'},400);return json(await bybitPublicSnapshot(symbol,market));}
+   if(url.pathname==='/api/snapshot'&&request.method==='GET'){const symbol=url.searchParams.get('symbol')||'BTCUSDT',market=url.searchParams.get('market')||'PERP';if(!UNIVERSE.includes(symbol)||!['SPOT','PERP'].includes(market))return json({error:'INSTRUMENTO_NO_ADMITIDO'},400);let s=await getObject(env.BUCKET,snapshotKey(symbol,market));if(symbol==='BTCUSDT'&&market==='PERP'&&(!s||Date.now()-s.received>60000)){const c=await cloudFeed();if(c.raw?.version===VERSION&&c.raw?.symbol===symbol&&(!s||c.raw.received>s.received)){try{s=await ingest(env.BUCKET,c.raw,{maxAgeMs:1800000,collector:'GITHUB_ACTIONS_PUBLICO'});}catch{}}}return json(s?freshen(s,Date.now()):{symbol,market,waitingForCollector:true,version:VERSION});}
   if(url.pathname==='/api/ingest'&&request.method==='POST'){
    if(request.headers.get('X-Bot-Write')!=='1'||request.headers.get('Origin')&&request.headers.get('Origin')!==url.origin||!request.headers.get('Content-Type')?.includes('application/json'))return json({error:'ORIGEN_O_CONTENIDO_INVALIDO'},403);
    const text=await request.text();if(text.length>12000000)return json({error:'CAPTURA_DEMASIADO_GRANDE'},413);return json(await ingest(env.BUCKET,JSON.parse(text)));
