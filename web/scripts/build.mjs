@@ -1,6 +1,6 @@
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 const serverPaths=['worker/universe.js','worker/market-contract.js','worker/engine.js','worker/indicators.js','worker/technicals.js','worker/auto-protocol.js','worker/protocol.js','worker/collector.js','worker/ui.js','worker/context.js','worker/providers.js','worker/service.js'];
-const clientFiles=['universe.js','market-contract.js','engine.js','indicators.js','technicals.js','auto-protocol.js','protocol.js','collector.js','live.js','chart.js','journal.js','lab.js','paper.js','panels.js','app.js','terminal.css'];
+const clientFiles=['universe.js','market-contract.js','engine.js','indicators.js','technicals.js','auto-protocol.js','protocol.js','collector.js','live.js','chart.js','journal.js','lab.js','trading-lanes.js','spot-explosion.js','liquidity-hunt.js','paper.js','panels.js','app.js','terminal.css'];
 const assets={};for(const file of clientFiles)assets['/'+file]={body:await readFile('worker/'+file,'utf8'),type:file.endsWith('.css')?'text/css; charset=utf-8':'application/javascript; charset=utf-8'};
 assets['/vendor/lightweight-charts.js']={body:await readFile('node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.mjs','utf8'),type:'application/javascript; charset=utf-8'};
 const chunks=await Promise.all(serverPaths.map(p=>readFile(p,'utf8')));chunks[chunks.length-1]=chunks.at(-1).replace("'__BUILD_PUBLIC_ASSETS__'",JSON.stringify(assets));
